@@ -1,5 +1,6 @@
 use tan::parser::expr::Expr;
 
+/// Formats an expression in compact form.
 pub fn format_compact(expr: &Expr) -> String {
     match expr {
         Expr::One => "()".to_owned(),
@@ -8,6 +9,16 @@ pub fn format_compact(expr: &Expr) -> String {
         Expr::Float(n) => n.to_string(),
         Expr::Symbol(s) => s.clone(),
         Expr::String(s) => s.clone(),
+        Expr::Do(terms) => {
+            format!(
+                "(do {})",
+                terms
+                    .iter()
+                    .map(|term| format!("{}", term.as_ref()))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            )
+        }
         Expr::List(terms) => {
             format!(
                 "({})",
@@ -20,4 +31,9 @@ pub fn format_compact(expr: &Expr) -> String {
         }
         Expr::Func(..) => "#<func>".to_owned(),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // #TODO implement some tests
 }
