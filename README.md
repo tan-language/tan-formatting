@@ -1,5 +1,11 @@
 # Tan Formatter
 
+## Insights
+
+## Links
+
+- https://github.com/apple/swift-format
+
 ## TODO
 
-- consider renaming to Tan Formatter
+- modes: pretty, compact, obfuscated
