@@ -1,4 +1,4 @@
-use tan::parser::expr::Expr;
+use tan::expr::Expr;
 
 /// Formats an expression in aestheticall pleasing form.
 /// This is the standard textual representation of expressions.
