@@ -9,16 +9,17 @@ pub fn format_compact(expr: &Expr) -> String {
         Expr::Float(n) => n.to_string(),
         Expr::Symbol(s) => s.clone(),
         Expr::String(s) => s.clone(),
-        Expr::Do(terms) => {
-            format!(
-                "(do {})",
-                terms
-                    .iter()
-                    .map(|term| format!("{}", term.as_ref()))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            )
-        }
+        Expr::Do => "do".to_owned(),
+        // Expr::Do(terms) => {
+        //     format!(
+        //         "(do {})",
+        //         terms
+        //             .iter()
+        //             .map(|term| format!("{}", term.as_ref()))
+        //             .collect::<Vec<String>>()
+        //             .join(" ")
+        //     )
+        // }
         Expr::List(terms) => {
             format!(
                 "({})",
