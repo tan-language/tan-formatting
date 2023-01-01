@@ -1,6 +1,6 @@
 [package]
 name = "tan_fmt"
-description = "Formatting technology for Tan"
+description = "Formatting technology for the Tan Language"
 version = "0.3.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tanlang-org/tan_fmt"
