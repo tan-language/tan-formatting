@@ -67,7 +67,7 @@ pub fn format_error_pretty<E: Error>(error: &Ranged<E>, input: &str, url: Option
     let url = url.unwrap_or("input");
 
     format!(
-        "error: {error}\n{}at {url}:{}:{}\n{}|\n{}| {}\n{}|{} {}",
+        "{error}\n{}at {url}:{}:{}\n{}|\n{}| {}\n{}|{} {}",
         line_space,
         line + 1,
         col + 1,
