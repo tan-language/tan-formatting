@@ -1,7 +1,7 @@
 [package]
 name = "tan_fmt"
 description = "Formatting technology for the Tan Language"
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/tanlang-org/tan_fmt"
 keywords = ["tan", "language", "formatting", "pretty-print"]
@@ -9,4 +9,4 @@ authors = ["George Moschovitis <gmosx@reizu.org>"]
 edition = "2021"
 
 [dependencies]
-tan = { path = "../tan", version = "0.3" }
+tan = { path = "../tan", version = "0.4" }
