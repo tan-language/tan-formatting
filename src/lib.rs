@@ -2,7 +2,9 @@ use std::error::Error;
 
 use tan::{expr::Expr, range::Ranged};
 
+// #TODO reuse the Position from tan?
 // #TODO split into `format_expr`, `format_error`.
+// #TODO add special support for formatting multiple errors?
 
 /// Formats an expression in compact form.
 pub fn format_expr_compact(expr: &Expr) -> String {
