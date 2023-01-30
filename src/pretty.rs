@@ -68,20 +68,26 @@ where
             Token::Annotation(s) => format!("#{s}"),
             Token::Quote => "'".to_owned(),
             Token::LeftParen => {
-                let s = self.format_list(Token::RightParen)?;
-                format!("({s})")
+                let mut s = "(\n".to_string();
+                s.push_str(&self.format_list(Token::RightParen)?);
+                s.push_str(&format!("{})", " ".repeat(self.nesting * IDENT_SIZE)));
+                s
             }
             Token::LeftBracket => {
                 // Syntactic sugar for a List/Array.
 
-                let s = self.format_list(Token::RightBracket)?;
-                format!("[\n{s}]")
+                let mut s = "[\n".to_string();
+                s.push_str(&self.format_list(Token::RightBracket)?);
+                s.push_str(&format!("{}]", " ".repeat(self.nesting * IDENT_SIZE)));
+                s
             }
             Token::LeftBrace => {
                 // Syntactic sugar for a Dict.
 
-                let s = self.format_list(Token::RightBrace)?;
-                format!("{{\n{s}}})")
+                let mut s = "{\n".to_string();
+                s.push_str(&self.format_list(Token::RightBrace)?);
+                s.push_str(&format!("{}}}", " ".repeat(self.nesting * IDENT_SIZE)));
+                s
             }
             Token::RightParen | Token::RightBracket | Token::RightBrace => {
                 // #TODO custom error for this?
