@@ -49,9 +49,40 @@ where
                 self.nesting -= 1;
                 return Ok(output);
             } else {
-                // #TODO set correct range
                 let s = self.format_expr(token)?;
                 output.push_str(&format!("{}{s}\n", " ".repeat(self.nesting * IDENT_SIZE)));
+            }
+        }
+    }
+
+    pub fn format_dict(&mut self, delimiter: Token) -> Result<String, NonRecoverableError> {
+        let mut output = String::new();
+
+        self.nesting += 1;
+
+        loop {
+            let Some(token1) = self.tokens.next() else {
+                // #TODO how to handle this?
+                self.push_error(Error::UnterminatedList);
+                return Err(NonRecoverableError {});
+            };
+
+            let Some(token2) = self.tokens.next() else {
+                // #TODO how to handle this?
+                self.push_error(Error::UnterminatedList);
+                return Err(NonRecoverableError {});
+            };
+
+            // #TODO more checks needed!
+
+            if token1.0 == delimiter || token2.0 == delimiter {
+                self.nesting -= 1;
+                return Ok(output);
+            } else {
+                let s = self.format_expr(token1)?;
+                output.push_str(&format!("{}{s}", " ".repeat(self.nesting * IDENT_SIZE)));
+                let s = self.format_expr(token2)?;
+                output.push_str(&format!(" {s}\n"));
             }
         }
     }
@@ -60,7 +91,7 @@ where
         let Ranged(t, _) = token;
 
         let output = match t {
-            Token::Comment(s) => s,
+            Token::Comment(s) => format!("{s}\n"),
             Token::String(s) => format!("\"{s}\""),
             Token::Symbol(s) => s,
             Token::Int(n) => n.to_string(),

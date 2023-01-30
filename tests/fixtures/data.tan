@@ -4,7 +4,7 @@
         :given_name "George"
         :family_name "Moschovitis"
         :score 98
-        :birth_date #Date "2000-01-01"
+        -- :birth_date #Date "2000-01-01"
         :labels [
             "admin"
             "owner"
