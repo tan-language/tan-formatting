@@ -1,3 +1,5 @@
+pub mod pretty;
+
 use std::error::Error;
 
 use tan::{expr::Expr, range::Ranged};
@@ -6,10 +8,11 @@ use tan::{expr::Expr, range::Ranged};
 // #TODO split into `format_expr`, `format_error`.
 // #TODO add special support for formatting multiple errors?
 
+// #TODO this is completely wrong, it skips comments, annotations, etc.
 /// Formats an expression in compact form.
-pub fn format_expr_compact(expr: &Expr) -> String {
+pub fn format_expr_compact(expr: impl AsRef<Expr>) -> String {
     // #TODO even compact, strip whitespace aggressively!
-    format!("{expr}")
+    format!("{}", expr.as_ref())
 }
 
 /// Formats an expression in aestheticall pleasing form.
