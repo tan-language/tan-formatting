@@ -1,6 +1,9 @@
 use tan::error::Error;
 use tan::{lexer::token::Token, parser::NonRecoverableError, range::Ranged};
 
+// #TODO add pragmas to define sections with different formatting options or even disabled formatting.
+// #TODO try to use annotations to define the above-mentioned sections.
+// #TODO this is the ugliest code ever written, wip.
 // #TODO rename to `formatter.rs`
 // #TODO how to handle parse errors?
 
