@@ -61,28 +61,49 @@ where
         self.nesting += 1;
 
         loop {
-            let Some(token1) = self.tokens.next() else {
-                // #TODO how to handle this?
-                self.push_error(Error::UnterminatedList);
-                return Err(NonRecoverableError {});
-            };
+            loop {
+                let Some(token) = self.tokens.next() else {
+                    // #TODO how to handle this?
+                    self.push_error(Error::UnterminatedList);
+                    return Err(NonRecoverableError {});
+                };
 
-            let Some(token2) = self.tokens.next() else {
-                // #TODO how to handle this?
-                self.push_error(Error::UnterminatedList);
-                return Err(NonRecoverableError {});
-            };
+                let cont = matches!(token.0, Token::Comment(..) | Token::Annotation(..));
 
-            // #TODO more checks needed!
+                if token.0 == delimiter {
+                    self.nesting -= 1;
+                    return Ok(output);
+                } else {
+                    let s = self.format_expr(token)?;
+                    output.push_str(&format!("{}{s}", " ".repeat(self.nesting * IDENT_SIZE)));
+                }
 
-            if token1.0 == delimiter || token2.0 == delimiter {
-                self.nesting -= 1;
-                return Ok(output);
-            } else {
-                let s = self.format_expr(token1)?;
-                output.push_str(&format!("{}{s}", " ".repeat(self.nesting * IDENT_SIZE)));
-                let s = self.format_expr(token2)?;
-                output.push_str(&format!(" {s}\n"));
+                if !cont {
+                    break;
+                }
+            }
+
+            loop {
+                let Some(token) = self.tokens.next() else {
+                    // #TODO how to handle this?
+                    self.push_error(Error::UnterminatedList);
+                    return Err(NonRecoverableError {});
+                };
+
+                if matches!(token.0, Token::Comment(..) | Token::Annotation(..)) {
+                    let s = self.format_expr(token)?;
+                    output.push_str(&format!(" {s}"));
+                } else {
+                    if token.0 == delimiter {
+                        self.nesting -= 1;
+                        return Ok(output);
+                    } else {
+                        let s = self.format_expr(token)?;
+                        output.push_str(&format!(" {s}\n"));
+                    }
+
+                    break;
+                }
             }
         }
     }
@@ -96,7 +117,9 @@ where
             Token::Symbol(s) => s,
             Token::Int(n) => n.to_string(),
             Token::Float(n) => n.to_string(),
-            Token::Annotation(s) => format!("#{s}"),
+            Token::Annotation(s) => {
+                format!("#{s}")
+            }
             Token::Quote => "'".to_owned(),
             Token::LeftParen => {
                 let mut s = "(\n".to_string();
@@ -116,7 +139,7 @@ where
                 // Syntactic sugar for a Dict.
 
                 let mut s = "{\n".to_string();
-                s.push_str(&self.format_list(Token::RightBrace)?);
+                s.push_str(&self.format_dict(Token::RightBrace)?);
                 s.push_str(&format!("{}}}", " ".repeat(self.nesting * IDENT_SIZE)));
                 s
             }

@@ -12,7 +12,5 @@ pub fn format_pretty_handles_data_input() {
     let output = formatter.format().unwrap();
     let expected_output = read_file("data.pretty.tan");
 
-    println!("{output}");
-
     assert_eq!(output, expected_output);
 }
