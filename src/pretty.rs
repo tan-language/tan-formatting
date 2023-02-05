@@ -118,8 +118,7 @@ where
             Token::Comment(s) => format!("{s}\n"),
             Token::String(s) => format!("\"{s}\""),
             Token::Symbol(s) => s,
-            Token::Int(n) => n.to_string(),
-            Token::Float(n) => n.to_string(),
+            Token::Number(n) => n.to_string(),
             Token::Annotation(s) => {
                 format!("#{s}")
             }
