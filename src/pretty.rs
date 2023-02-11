@@ -6,6 +6,7 @@ use tan::{lexer::token::Token, parser::NonRecoverableError, range::Ranged};
 // #TODO this is the ugliest code ever written, wip.
 // #TODO rename to `formatter.rs`
 // #TODO how to handle parse errors?
+// #TODO optimize formatter to minimize diffs.
 
 // #TODO consider using tabs to indent?
 
@@ -21,6 +22,7 @@ where
 {
     tokens: I::IntoIter,
     nesting: usize,
+    lookahead: Vec<Ranged<Token>>,
     errors: Vec<Error>,
     indent_size: usize,
     line_size: usize,
@@ -42,7 +44,22 @@ where
             errors: Vec::new(),
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
+            lookahead: Vec::new(),
         }
+    }
+
+    // #TODO unit test
+    // #TODO refactor
+    fn next_token(&mut self) -> Option<Ranged<Token>> {
+        if let Some(t) = self.lookahead.pop() {
+            return Some(t);
+        }
+
+        self.tokens.next()
+    }
+
+    fn put_back_token(&mut self, t: Ranged<Token>) {
+        self.lookahead.push(t);
     }
 
     fn push_error(&mut self, error: Error) {
@@ -57,7 +74,7 @@ where
         let mut output: Vec<String> = Vec::new();
 
         loop {
-            let Some(token) = self.tokens.next() else {
+            let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
                 self.push_error(Error::UnterminatedList);
                 return Err(NonRecoverableError {});
@@ -79,17 +96,17 @@ where
     ) -> Result<String, NonRecoverableError> {
         let mut output = String::new();
 
-        self.nesting += 1;
+        // self.nesting += 1;
 
         loop {
-            let Some(token) = self.tokens.next() else {
+            let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
                 self.push_error(Error::UnterminatedList);
                 return Err(NonRecoverableError {});
             };
 
             if token.0 == delimiter {
-                self.nesting -= 1;
+                // self.nesting -= 1;
                 return Ok(output);
             } else {
                 let s = self.format_expr(token)?;
@@ -101,14 +118,43 @@ where
         }
     }
 
+    // #TODO find better name
+    pub fn format_list_vertical2(
+        &mut self,
+        delimiter: Token,
+    ) -> Result<String, NonRecoverableError> {
+        let mut output = String::new();
+
+        // self.nesting += 1;
+
+        loop {
+            let Some(token) = self.next_token() else {
+                    // #TODO how to handle this?
+                    self.push_error(Error::UnterminatedList);
+                    return Err(NonRecoverableError {});
+                };
+
+            if token.0 == delimiter {
+                // self.nesting -= 1;
+                return Ok(output);
+            } else {
+                let s = self.format_expr(token)?;
+                output.push_str(&format!(
+                    "{}{s}",
+                    " ".repeat(self.nesting * self.indent_size)
+                ));
+            }
+        }
+    }
+
     pub fn format_dict(&mut self, delimiter: Token) -> Result<String, NonRecoverableError> {
         let mut output = String::new();
 
-        self.nesting += 1;
+        // self.nesting += 1;
 
         loop {
             loop {
-                let Some(token) = self.tokens.next() else {
+                let Some(token) = self.next_token() else {
                     // #TODO how to handle this?
                     self.push_error(Error::UnterminatedList);
                     return Err(NonRecoverableError {});
@@ -117,7 +163,7 @@ where
                 let cont = matches!(token.0, Token::Comment(..) | Token::Annotation(..));
 
                 if token.0 == delimiter {
-                    self.nesting -= 1;
+                    // self.nesting -= 1;
                     return Ok(output);
                 } else {
                     let s = self.format_expr(token)?;
@@ -133,7 +179,7 @@ where
             }
 
             loop {
-                let Some(token) = self.tokens.next() else {
+                let Some(token) = self.next_token() else {
                     // #TODO how to handle this?
                     self.push_error(Error::UnterminatedList);
                     return Err(NonRecoverableError {});
@@ -173,16 +219,45 @@ where
                 // #TODO detect kind of expression and format accordingly!
                 // #TODO we need lookahead.
 
-                let mut s = "(".to_string();
-                s.push_str(&self.format_list_horizontal(Token::RightParen)?);
-                s.push_str(")\n");
-                s
+                let Some(token) = self.next_token() else {
+                    // #TODO how to handle this?
+                    self.push_error(Error::UnterminatedList);
+                    return Err(NonRecoverableError {});
+                };
+
+                if let Ranged(Token::Symbol(lexeme), _) = &token {
+                    if lexeme == "do" {
+                        // #TODO custom
+                        let mut s = "(do\n".to_string();
+                        self.nesting += 1;
+                        s.push_str(&self.format_list_vertical2(Token::RightParen)?);
+                        self.nesting -= 1;
+                        s.push_str(")\n");
+                        s
+                    } else {
+                        self.put_back_token(token);
+
+                        let mut s = "(".to_string();
+                        s.push_str(&self.format_list_horizontal(Token::RightParen)?);
+                        s.push_str(")\n");
+                        s
+                    }
+                } else {
+                    self.put_back_token(token);
+
+                    let mut s = "(".to_string();
+                    s.push_str(&self.format_list_horizontal(Token::RightParen)?);
+                    s.push_str(")\n");
+                    s
+                }
             }
             Token::LeftBracket => {
                 // Syntactic sugar for a List/Array.
 
                 let mut s = "[\n".to_string();
+                self.nesting += 1;
                 s.push_str(&self.format_list_vertical(Token::RightBracket)?);
+                self.nesting -= 1;
                 s.push_str(&format!(
                     "{}]",
                     " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
@@ -193,7 +268,9 @@ where
                 // Syntactic sugar for a Dict.
 
                 let mut s = "{\n".to_string();
+                self.nesting += 1;
                 s.push_str(&self.format_dict(Token::RightBrace)?);
+                self.nesting -= 1;
                 s.push_str(&format!(
                     "{}}}",
                     " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
@@ -217,7 +294,7 @@ where
         let mut output = String::new();
 
         loop {
-            let Some(token) = self.tokens.next() else {
+            let Some(token) = self.next_token() else {
                 break;
             };
 

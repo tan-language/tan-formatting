@@ -25,14 +25,14 @@ pub fn format_pretty_handles_code_input() {
     assert_eq!(output, expected_output);
 }
 
-// #[test]
-// pub fn format_pretty_handles_more_code_input() {
-//     let input = lex_file("fibonacci.tan").unwrap();
-//     let mut formatter = Formatter::new(input);
-//     let output = formatter.format().unwrap();
-//     let expected_output = read_file("fibonacci.pretty.tan");
+#[test]
+pub fn format_pretty_handles_more_code_input() {
+    let input = lex_file("fibonacci.tan").unwrap();
+    let mut formatter = Formatter::new(input);
+    let output = formatter.format().unwrap();
+    let expected_output = read_file("fibonacci.pretty.tan");
 
-//     println!("{output}");
+    println!("{output}");
 
-//     // assert_eq!(output, expected_output);
-// }
+    // assert_eq!(output, expected_output);
+}
