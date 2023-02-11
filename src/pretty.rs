@@ -7,7 +7,13 @@ use tan::{lexer::token::Token, parser::NonRecoverableError, range::Ranged};
 // #TODO rename to `formatter.rs`
 // #TODO how to handle parse errors?
 
-const IDENT_SIZE: usize = 4;
+// #TODO consider using tabs to indent?
+
+/// The default indentation size (char count)
+const DEFAULT_INDENT_SIZE: usize = 4;
+
+/// The default (target) line size (char count)
+const DEFAULT_LINE_SIZE: usize = 80;
 
 pub struct Formatter<I>
 where
@@ -16,7 +22,11 @@ where
     tokens: I::IntoIter,
     nesting: usize,
     errors: Vec<Error>,
+    indent_size: usize,
+    line_size: usize,
 }
+
+// #TODO introduce default constructor.
 
 impl<I> Formatter<I>
 where
@@ -29,6 +39,8 @@ where
             tokens,
             nesting: 0,
             errors: Vec::new(),
+            indent_size: DEFAULT_INDENT_SIZE,
+            line_size: DEFAULT_LINE_SIZE,
         }
     }
 
@@ -53,7 +65,10 @@ where
                 return Ok(output);
             } else {
                 let s = self.format_expr(token)?;
-                output.push_str(&format!("{}{s}\n", " ".repeat(self.nesting * IDENT_SIZE)));
+                output.push_str(&format!(
+                    "{}{s}\n",
+                    " ".repeat(self.nesting * self.indent_size)
+                ));
             }
         }
     }
@@ -78,7 +93,10 @@ where
                     return Ok(output);
                 } else {
                     let s = self.format_expr(token)?;
-                    output.push_str(&format!("{}{s}", " ".repeat(self.nesting * IDENT_SIZE)));
+                    output.push_str(&format!(
+                        "{}{s}",
+                        " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                    ));
                 }
 
                 if !cont {
@@ -118,7 +136,7 @@ where
             Token::Comment(s) => format!("{s}\n"),
             Token::String(s) => format!("\"{s}\""),
             Token::Symbol(s) => s,
-            Token::Number(n) => n.to_string(),
+            Token::Number(s) => s,
             Token::Annotation(s) => {
                 format!("#{s}")
             }
@@ -126,7 +144,10 @@ where
             Token::LeftParen => {
                 let mut s = "(\n".to_string();
                 s.push_str(&self.format_list(Token::RightParen)?);
-                s.push_str(&format!("{})", " ".repeat(self.nesting * IDENT_SIZE)));
+                s.push_str(&format!(
+                    "{})",
+                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                ));
                 s
             }
             Token::LeftBracket => {
@@ -134,7 +155,10 @@ where
 
                 let mut s = "[\n".to_string();
                 s.push_str(&self.format_list(Token::RightBracket)?);
-                s.push_str(&format!("{}]", " ".repeat(self.nesting * IDENT_SIZE)));
+                s.push_str(&format!(
+                    "{}]",
+                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                ));
                 s
             }
             Token::LeftBrace => {
@@ -142,7 +166,10 @@ where
 
                 let mut s = "{\n".to_string();
                 s.push_str(&self.format_dict(Token::RightBrace)?);
-                s.push_str(&format!("{}}}", " ".repeat(self.nesting * IDENT_SIZE)));
+                s.push_str(&format!(
+                    "{}}}",
+                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                ));
                 s
             }
             Token::RightParen | Token::RightBracket | Token::RightBrace => {
