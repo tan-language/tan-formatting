@@ -27,6 +27,7 @@ where
 }
 
 // #TODO introduce default constructor.
+// #TODO introduce 'builder' api?
 
 impl<I> Formatter<I>
 where
@@ -48,7 +49,34 @@ where
         self.errors.push(error);
     }
 
-    pub fn format_list(&mut self, delimiter: Token) -> Result<String, NonRecoverableError> {
+    // #TODO find better name
+    pub fn format_list_horizontal(
+        &mut self,
+        delimiter: Token,
+    ) -> Result<String, NonRecoverableError> {
+        let mut output: Vec<String> = Vec::new();
+
+        loop {
+            let Some(token) = self.tokens.next() else {
+                // #TODO how to handle this?
+                self.push_error(Error::UnterminatedList);
+                return Err(NonRecoverableError {});
+            };
+
+            if token.0 == delimiter {
+                return Ok(output.join(" "));
+            } else {
+                let s = self.format_expr(token)?;
+                output.push(s);
+            }
+        }
+    }
+
+    // #TODO find better name
+    pub fn format_list_vertical(
+        &mut self,
+        delimiter: Token,
+    ) -> Result<String, NonRecoverableError> {
         let mut output = String::new();
 
         self.nesting += 1;
@@ -142,19 +170,16 @@ where
             }
             Token::Quote => "'".to_owned(),
             Token::LeftParen => {
-                let mut s = "(\n".to_string();
-                s.push_str(&self.format_list(Token::RightParen)?);
-                s.push_str(&format!(
-                    "{})",
-                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
-                ));
+                let mut s = "(".to_string();
+                s.push_str(&self.format_list_horizontal(Token::RightParen)?);
+                s.push_str(")\n");
                 s
             }
             Token::LeftBracket => {
                 // Syntactic sugar for a List/Array.
 
                 let mut s = "[\n".to_string();
-                s.push_str(&self.format_list(Token::RightBracket)?);
+                s.push_str(&self.format_list_vertical(Token::RightBracket)?);
                 s.push_str(&format!(
                     "{}]",
                     " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)

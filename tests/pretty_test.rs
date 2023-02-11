@@ -14,3 +14,13 @@ pub fn format_pretty_handles_data_input() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_handles_text_input() {
+    let input = lex_file("code.tan").unwrap();
+    let mut formatter = Formatter::new(input);
+    let output = formatter.format().unwrap();
+    let expected_output = read_file("code.pretty.tan");
+
+    assert_eq!(output, expected_output);
+}
