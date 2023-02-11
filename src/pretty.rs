@@ -170,6 +170,9 @@ where
             }
             Token::Quote => "'".to_owned(),
             Token::LeftParen => {
+                // #TODO detect kind of expression and format accordingly!
+                // #TODO we need lookahead.
+
                 let mut s = "(".to_string();
                 s.push_str(&self.format_list_horizontal(Token::RightParen)?);
                 s.push_str(")\n");
