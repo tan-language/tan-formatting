@@ -94,7 +94,7 @@ where
         &mut self,
         delimiter: Token,
     ) -> Result<String, NonRecoverableError> {
-        let mut output = String::new();
+        let mut output: Vec<String> = Vec::new();
 
         // self.nesting += 1;
 
@@ -107,11 +107,11 @@ where
 
             if token.0 == delimiter {
                 // self.nesting -= 1;
-                return Ok(output);
+                return Ok(output.join("\n"));
             } else {
                 let s = self.format_expr(token)?;
-                output.push_str(&format!(
-                    "{}{s}\n",
+                output.push(format!(
+                    "{}{s}",
                     " ".repeat(self.nesting * self.indent_size)
                 ));
             }
@@ -123,23 +123,23 @@ where
         &mut self,
         delimiter: Token,
     ) -> Result<String, NonRecoverableError> {
-        let mut output = String::new();
+        let mut output: Vec<String> = Vec::new();
 
         // self.nesting += 1;
 
         loop {
             let Some(token) = self.next_token() else {
-                    // #TODO how to handle this?
-                    self.push_error(Error::UnterminatedList);
-                    return Err(NonRecoverableError {});
-                };
+                // #TODO how to handle this?
+                self.push_error(Error::UnterminatedList);
+                return Err(NonRecoverableError {});
+            };
 
             if token.0 == delimiter {
                 // self.nesting -= 1;
-                return Ok(output);
+                return Ok(output.join("\n"));
             } else {
                 let s = self.format_expr(token)?;
-                output.push_str(&format!(
+                output.push(format!(
                     "{}{s}",
                     " ".repeat(self.nesting * self.indent_size)
                 ));
@@ -207,7 +207,7 @@ where
         let Ranged(t, _) = token;
 
         let output = match t {
-            Token::Comment(s) => format!("{s}\n"),
+            Token::Comment(s) => format!("{s}"),
             Token::String(s) => format!("\"{s}\""),
             Token::Symbol(s) => s,
             Token::Number(s) => s,
@@ -227,19 +227,37 @@ where
 
                 if let Ranged(Token::Symbol(lexeme), _) = &token {
                     if lexeme == "do" {
-                        // #TODO custom
                         let mut s = "(do\n".to_string();
                         self.nesting += 1;
                         s.push_str(&self.format_list_vertical2(Token::RightParen)?);
                         self.nesting -= 1;
-                        s.push_str(")\n");
+                        s.push_str(&format!(
+                            "\n{})",
+                            " ".repeat(self.nesting * self.indent_size)
+                        ));
+                        s
+                    } else if lexeme == "Func" || lexeme == "if" {
+                        let mut s = format!("({lexeme} ");
+                        let Some(token) = self.next_token() else {
+                            // #TODO how to handle this?
+                            self.push_error(Error::UnterminatedList);
+                            return Err(NonRecoverableError {});
+                        };
+                        s.push_str(&format!("{}\n", self.format_expr(token)?));
+                        self.nesting += 1;
+                        s.push_str(&self.format_list_vertical2(Token::RightParen)?);
+                        self.nesting -= 1;
+                        s.push_str(&format!(
+                            "\n{})",
+                            " ".repeat(self.nesting * self.indent_size)
+                        ));
                         s
                     } else {
                         self.put_back_token(token);
 
                         let mut s = "(".to_string();
                         s.push_str(&self.format_list_horizontal(Token::RightParen)?);
-                        s.push_str(")\n");
+                        s.push(')');
                         s
                     }
                 } else {
@@ -247,7 +265,7 @@ where
 
                     let mut s = "(".to_string();
                     s.push_str(&self.format_list_horizontal(Token::RightParen)?);
-                    s.push_str(")\n");
+                    s.push(')');
                     s
                 }
             }
@@ -305,7 +323,7 @@ where
                 // break;
             };
 
-            output.push_str(&s);
+            output.push_str(&format!("{s}\n"));
         }
 
         Ok(output)
