@@ -7,14 +7,15 @@ use tan::{lexer::token::Token, parser::NonRecoverableError, range::Ranged};
 // #TODO rename to `formatter.rs`
 // #TODO how to handle parse errors?
 // #TODO optimize formatter to minimize diffs.
-
+// #TODO try to maintain some empty separator lines.
 // #TODO consider using tabs to indent?
+// #TODO consider allowing absolutely no parameters for the formatter.
 
 /// The default indentation size (char count)
 const DEFAULT_INDENT_SIZE: usize = 4;
 
 /// The default (target) line size (char count)
-const DEFAULT_LINE_SIZE: usize = 80;
+// const DEFAULT_LINE_SIZE: usize = 80;
 
 pub struct Formatter<I>
 where
@@ -25,7 +26,7 @@ where
     lookahead: Vec<Ranged<Token>>,
     errors: Vec<Error>,
     indent_size: usize,
-    line_size: usize,
+    // line_size: usize,
 }
 
 // #TODO introduce default constructor.
@@ -43,7 +44,7 @@ where
             nesting: 0,
             errors: Vec::new(),
             indent_size: DEFAULT_INDENT_SIZE,
-            line_size: DEFAULT_LINE_SIZE,
+            // line_size: DEFAULT_LINE_SIZE,
             lookahead: Vec::new(),
         }
     }
@@ -277,7 +278,7 @@ where
                 s.push_str(&self.format_list_vertical(Token::RightBracket)?);
                 self.nesting -= 1;
                 s.push_str(&format!(
-                    "{}]",
+                    "\n{}]",
                     " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
                 ));
                 s

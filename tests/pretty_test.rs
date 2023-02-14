@@ -32,5 +32,6 @@ pub fn format_pretty_handles_more_code_input() {
     let output = formatter.format().unwrap();
     let expected_output = read_file("fibonacci.pretty.tan");
 
+    println!("{output}");
     assert_eq!(output, expected_output);
 }
