@@ -1,5 +1,6 @@
 use tan::error::Error;
-use tan::{lexer::token::Token, parser::NonRecoverableError, range::Ranged};
+use tan::util::Break;
+use tan::{lexer::token::Token, range::Ranged};
 
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
@@ -68,17 +69,14 @@ where
     }
 
     // #TODO find better name
-    pub fn format_list_horizontal(
-        &mut self,
-        delimiter: Token,
-    ) -> Result<String, NonRecoverableError> {
+    pub fn format_list_horizontal(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output: Vec<String> = Vec::new();
 
         loop {
             let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
                 self.push_error(Error::UnterminatedList);
-                return Err(NonRecoverableError {});
+                return Err(Break {});
             };
 
             if token.0 == delimiter {
@@ -91,10 +89,7 @@ where
     }
 
     // #TODO find better name
-    pub fn format_list_vertical(
-        &mut self,
-        delimiter: Token,
-    ) -> Result<String, NonRecoverableError> {
+    pub fn format_list_vertical(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output: Vec<String> = Vec::new();
 
         // self.nesting += 1;
@@ -103,7 +98,7 @@ where
             let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
                 self.push_error(Error::UnterminatedList);
-                return Err(NonRecoverableError {});
+                return Err(Break {});
             };
 
             if token.0 == delimiter {
@@ -120,10 +115,7 @@ where
     }
 
     // #TODO find better name
-    pub fn format_list_vertical2(
-        &mut self,
-        delimiter: Token,
-    ) -> Result<String, NonRecoverableError> {
+    pub fn format_list_vertical2(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output: Vec<String> = Vec::new();
 
         // self.nesting += 1;
@@ -132,7 +124,7 @@ where
             let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
                 self.push_error(Error::UnterminatedList);
-                return Err(NonRecoverableError {});
+                return Err(Break {});
             };
 
             if token.0 == delimiter {
@@ -148,7 +140,7 @@ where
         }
     }
 
-    pub fn format_dict(&mut self, delimiter: Token) -> Result<String, NonRecoverableError> {
+    pub fn format_dict(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output = String::new();
 
         // self.nesting += 1;
@@ -158,7 +150,7 @@ where
                 let Some(token) = self.next_token() else {
                     // #TODO how to handle this?
                     self.push_error(Error::UnterminatedList);
-                    return Err(NonRecoverableError {});
+                    return Err(Break {});
                 };
 
                 let cont = matches!(token.0, Token::Comment(..) | Token::Annotation(..));
@@ -183,7 +175,7 @@ where
                 let Some(token) = self.next_token() else {
                     // #TODO how to handle this?
                     self.push_error(Error::UnterminatedList);
-                    return Err(NonRecoverableError {});
+                    return Err(Break {});
                 };
 
                 if matches!(token.0, Token::Comment(..) | Token::Annotation(..)) {
@@ -204,11 +196,11 @@ where
         }
     }
 
-    pub fn format_expr(&mut self, token: Ranged<Token>) -> Result<String, NonRecoverableError> {
+    pub fn format_expr(&mut self, token: Ranged<Token>) -> Result<String, Break> {
         let Ranged(t, _) = token;
 
         let output = match t {
-            Token::Comment(s) => format!("{s}"),
+            Token::Comment(s) => s,
             Token::String(s) => format!("\"{s}\""),
             Token::Symbol(s) => s,
             Token::Number(s) => s,
@@ -223,7 +215,7 @@ where
                 let Some(token) = self.next_token() else {
                     // #TODO how to handle this?
                     self.push_error(Error::UnterminatedList);
-                    return Err(NonRecoverableError {});
+                    return Err(Break {});
                 };
 
                 if let Ranged(Token::Symbol(lexeme), _) = &token {
@@ -242,7 +234,7 @@ where
                         let Some(token) = self.next_token() else {
                             // #TODO how to handle this?
                             self.push_error(Error::UnterminatedList);
-                            return Err(NonRecoverableError {});
+                            return Err(Break {});
                         };
                         s.push_str(&format!("{}\n", self.format_expr(token)?));
                         self.nesting += 1;
