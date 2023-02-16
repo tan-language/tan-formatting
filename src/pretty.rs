@@ -92,32 +92,6 @@ where
     pub fn format_list_vertical(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output: Vec<String> = Vec::new();
 
-        // self.nesting += 1;
-
-        loop {
-            let Some(token) = self.next_token() else {
-                // #TODO how to handle this?
-                self.push_error(Error::UnterminatedList);
-                return Err(Break {});
-            };
-
-            if token.0 == delimiter {
-                // self.nesting -= 1;
-                return Ok(output.join("\n"));
-            } else {
-                let s = self.format_expr(token)?;
-                output.push(format!(
-                    "{}{s}",
-                    " ".repeat(self.nesting * self.indent_size)
-                ));
-            }
-        }
-    }
-
-    // #TODO find better name
-    pub fn format_list_vertical2(&mut self, delimiter: Token) -> Result<String, Break> {
-        let mut output: Vec<String> = Vec::new();
-
         loop {
             let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
@@ -136,6 +110,29 @@ where
             }
         }
     }
+
+    // // #TODO find better name
+    // pub fn format_list_vertical2(&mut self, delimiter: Token) -> Result<String, Break> {
+    //     let mut output: Vec<String> = Vec::new();
+
+    //     loop {
+    //         let Some(token) = self.next_token() else {
+    //             // #TODO how to handle this?
+    //             self.push_error(Error::UnterminatedList);
+    //             return Err(Break {});
+    //         };
+
+    //         if token.0 == delimiter {
+    //             return Ok(output.join("\n"));
+    //         } else {
+    //             let s = self.format_expr(token)?;
+    //             output.push(format!(
+    //                 "{}{s}",
+    //                 " ".repeat(self.nesting * self.indent_size)
+    //             ));
+    //         }
+    //     }
+    // }
 
     pub fn format_dict(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output = String::new();
@@ -214,9 +211,10 @@ where
 
                 if let Ranged(Token::Symbol(lexeme), _) = &token {
                     if lexeme == "do" {
+                        // The tail terms are rendered vertically.
                         let mut s = "(do\n".to_string();
                         self.nesting += 1;
-                        s.push_str(&self.format_list_vertical2(Token::RightParen)?);
+                        s.push_str(&self.format_list_vertical(Token::RightParen)?);
                         self.nesting -= 1;
                         s.push_str(&format!(
                             "\n{})",
@@ -224,6 +222,8 @@ where
                         ));
                         s
                     } else if lexeme == "Func" || lexeme == "if" {
+                        // The first tail term is rendered in same line, the
+                        // rest are rendered vertically.
                         let mut s = format!("({lexeme} ");
                         let Some(token) = self.next_token() else {
                             // #TODO how to handle this?
@@ -232,7 +232,7 @@ where
                         };
                         s.push_str(&format!("{}\n", self.format_expr(token)?));
                         self.nesting += 1;
-                        s.push_str(&self.format_list_vertical2(Token::RightParen)?);
+                        s.push_str(&self.format_list_vertical(Token::RightParen)?);
                         self.nesting -= 1;
                         s.push_str(&format!(
                             "\n{})",
