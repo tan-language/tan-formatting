@@ -78,7 +78,7 @@ impl<'a> Formatter<'a> {
 
             output.push(format!(
                 "{}{key} {value}",
-                " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                " ".repeat(self.nesting * self.indent_size)
             ));
         }
 
@@ -157,7 +157,7 @@ impl<'a> Formatter<'a> {
                 self.nesting -= 1;
                 s.push_str(&format!(
                     "\n{}]",
-                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                    " ".repeat(self.nesting * self.indent_size)
                 ));
                 s
             }
@@ -169,7 +169,7 @@ impl<'a> Formatter<'a> {
                 self.nesting -= 1;
                 s.push_str(&format!(
                     "\n{}}}",
-                    " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+                    " ".repeat(self.nesting * self.indent_size)
                 ));
                 s
             }
