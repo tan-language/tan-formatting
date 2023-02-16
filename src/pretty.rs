@@ -16,7 +16,7 @@ use tan::{lexer::token::Token, range::Ranged};
 const DEFAULT_INDENT_SIZE: usize = 4;
 
 /// The default (target) line size (char count)
-// const DEFAULT_LINE_SIZE: usize = 80;
+const DEFAULT_LINE_SIZE: usize = 80;
 
 pub struct Formatter<I>
 where
@@ -27,7 +27,10 @@ where
     lookahead: Vec<Ranged<Token>>,
     errors: Vec<Error>,
     indent_size: usize,
-    // line_size: usize,
+    #[allow(dead_code)]
+    line_size: usize,
+    #[allow(dead_code)]
+    col: usize,
 }
 
 // #TODO introduce default constructor.
@@ -45,8 +48,9 @@ where
             nesting: 0,
             errors: Vec::new(),
             indent_size: DEFAULT_INDENT_SIZE,
-            // line_size: DEFAULT_LINE_SIZE,
+            line_size: DEFAULT_LINE_SIZE,
             lookahead: Vec::new(),
+            col: 0,
         }
     }
 
@@ -110,29 +114,6 @@ where
             }
         }
     }
-
-    // // #TODO find better name
-    // pub fn format_list_vertical2(&mut self, delimiter: Token) -> Result<String, Break> {
-    //     let mut output: Vec<String> = Vec::new();
-
-    //     loop {
-    //         let Some(token) = self.next_token() else {
-    //             // #TODO how to handle this?
-    //             self.push_error(Error::UnterminatedList);
-    //             return Err(Break {});
-    //         };
-
-    //         if token.0 == delimiter {
-    //             return Ok(output.join("\n"));
-    //         } else {
-    //             let s = self.format_expr(token)?;
-    //             output.push(format!(
-    //                 "{}{s}",
-    //                 " ".repeat(self.nesting * self.indent_size)
-    //             ));
-    //         }
-    //     }
-    // }
 
     pub fn format_dict(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output = String::new();
@@ -239,6 +220,8 @@ where
                             " ".repeat(self.nesting * self.indent_size)
                         ));
                         s
+                    // #TODO custom 
+                    // } else if lexeme == "let" {
                     } else {
                         self.put_back_token(token);
 
@@ -307,7 +290,6 @@ where
                 // A non-recoverable parse error was detected, stop parsing.
                 let errors = std::mem::take(&mut self.errors);
                 return Err(errors);
-                // break;
             };
 
             output.push_str(&format!("{s}\n"));
