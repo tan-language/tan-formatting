@@ -118,8 +118,6 @@ where
     pub fn format_list_vertical2(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output: Vec<String> = Vec::new();
 
-        // self.nesting += 1;
-
         loop {
             let Some(token) = self.next_token() else {
                 // #TODO how to handle this?
@@ -128,7 +126,6 @@ where
             };
 
             if token.0 == delimiter {
-                // self.nesting -= 1;
                 return Ok(output.join("\n"));
             } else {
                 let s = self.format_expr(token)?;
@@ -143,8 +140,6 @@ where
     pub fn format_dict(&mut self, delimiter: Token) -> Result<String, Break> {
         let mut output = String::new();
 
-        // self.nesting += 1;
-
         loop {
             loop {
                 let Some(token) = self.next_token() else {
@@ -156,7 +151,6 @@ where
                 let cont = matches!(token.0, Token::Comment(..) | Token::Annotation(..));
 
                 if token.0 == delimiter {
-                    // self.nesting -= 1;
                     return Ok(output);
                 } else {
                     let s = self.format_expr(token)?;
