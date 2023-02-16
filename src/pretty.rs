@@ -1,6 +1,7 @@
-use tan::error::Error;
-use tan::util::Break;
-use tan::{lexer::token::Token, range::Ranged};
+use std::collections::HashMap;
+
+use tan::ann::Ann;
+use tan::expr::Expr;
 
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
@@ -18,14 +19,9 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
 
-pub struct Formatter<I>
-where
-    I: IntoIterator<Item = Ranged<Token>>,
-{
-    tokens: I::IntoIter,
+pub struct Formatter<'a> {
+    exprs: &'a [Ann<Expr>],
     nesting: usize,
-    lookahead: Vec<Ranged<Token>>,
-    errors: Vec<Error>,
     indent_size: usize,
     #[allow(dead_code)]
     line_size: usize,
@@ -36,215 +32,68 @@ where
 // #TODO introduce default constructor.
 // #TODO introduce 'builder' api?
 
-impl<I> Formatter<I>
-where
-    I: IntoIterator<Item = Ranged<Token>>,
-{
-    pub fn new(tokens: I) -> Self {
-        let tokens = tokens.into_iter();
-
+impl<'a> Formatter<'a> {
+    pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
         Self {
-            tokens,
+            exprs,
             nesting: 0,
-            errors: Vec::new(),
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
-            lookahead: Vec::new(),
             col: 0,
         }
     }
 
-    // #TODO unit test
-    // #TODO refactor
-    fn next_token(&mut self) -> Option<Ranged<Token>> {
-        if let Some(t) = self.lookahead.pop() {
-            return Some(t);
-        }
-
-        self.tokens.next()
-    }
-
-    fn put_back_token(&mut self, t: Ranged<Token>) {
-        self.lookahead.push(t);
-    }
-
-    fn push_error(&mut self, error: Error) {
-        self.errors.push(error);
-    }
-
     // #TODO find better name
-    pub fn format_list_horizontal(&mut self, delimiter: Token) -> Result<String, Break> {
+    pub fn format_vertical(&mut self, exprs: &[Expr]) -> String {
         let mut output: Vec<String> = Vec::new();
 
-        loop {
-            let Some(token) = self.next_token() else {
-                // #TODO how to handle this?
-                self.push_error(Error::UnterminatedList);
-                return Err(Break {});
-            };
-
-            if token.0 == delimiter {
-                return Ok(output.join(" "));
-            } else {
-                let s = self.format_expr(token)?;
-                output.push(s);
-            }
+        for expr in exprs {
+            let s = self.format_expr(expr);
+            output.push(format!(
+                "{}{s}",
+                " ".repeat(self.nesting * self.indent_size)
+            ));
         }
+
+        output.join("\n")
     }
 
-    // #TODO find better name
-    pub fn format_list_vertical(&mut self, delimiter: Token) -> Result<String, Break> {
+    // #TODO rename to format_pairs.
+    pub fn format_dict(&mut self, dict: &HashMap<String, Expr>) -> String {
         let mut output: Vec<String> = Vec::new();
 
-        loop {
-            let Some(token) = self.next_token() else {
-                // #TODO how to handle this?
-                self.push_error(Error::UnterminatedList);
-                return Err(Break {});
-            };
+        for (key, value) in dict {
+            let key = format!(":{key}"); // #TODO temp solution!
+            let value = self.format_expr(value);
 
-            if token.0 == delimiter {
-                return Ok(output.join("\n"));
-            } else {
-                let s = self.format_expr(token)?;
-                output.push(format!(
-                    "{}{s}",
-                    " ".repeat(self.nesting * self.indent_size)
-                ));
-            }
+            output.push(format!(
+                "{}{key} {value}",
+                " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+            ));
         }
+
+        output.join("\n")
     }
 
-    pub fn format_dict(&mut self, delimiter: Token) -> Result<String, Break> {
-        let mut output = String::new();
+    // #TODO automatically put `_` separators to numbers.
 
-        loop {
-            loop {
-                let Some(token) = self.next_token() else {
-                    // #TODO how to handle this?
-                    self.push_error(Error::UnterminatedList);
-                    return Err(Break {});
-                };
-
-                let cont = matches!(token.0, Token::Comment(..) | Token::Annotation(..));
-
-                if token.0 == delimiter {
-                    return Ok(output);
-                } else {
-                    let s = self.format_expr(token)?;
-                    output.push_str(&format!(
-                        "{}{s}",
-                        " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
-                    ));
-                }
-
-                if !cont {
-                    break;
-                }
-            }
-
-            loop {
-                let Some(token) = self.next_token() else {
-                    // #TODO how to handle this?
-                    self.push_error(Error::UnterminatedList);
-                    return Err(Break {});
-                };
-
-                if matches!(token.0, Token::Comment(..) | Token::Annotation(..)) {
-                    let s = self.format_expr(token)?;
-                    output.push_str(&format!(" {s}"));
-                } else {
-                    if token.0 == delimiter {
-                        self.nesting -= 1;
-                        return Ok(output);
-                    } else {
-                        let s = self.format_expr(token)?;
-                        output.push_str(&format!(" {s}\n"));
-                    }
-
-                    break;
-                }
-            }
-        }
-    }
-
-    pub fn format_expr(&mut self, token: Ranged<Token>) -> Result<String, Break> {
-        let Ranged(t, _) = token;
-
-        let output = match t {
-            Token::Comment(s) => s,
-            Token::String(s) => format!("\"{s}\""),
-            Token::Symbol(s) => s,
-            Token::Number(s) => s,
-            Token::Annotation(s) => {
-                format!("#{s}")
-            }
-            Token::Quote => "'".to_owned(),
-            Token::LeftParen => {
-                // #TODO detect kind of expression and format accordingly!
-                // #TODO we need lookahead.
-
-                let Some(token) = self.next_token() else {
-                    // #TODO how to handle this?
-                    self.push_error(Error::UnterminatedList);
-                    return Err(Break {});
-                };
-
-                if let Ranged(Token::Symbol(lexeme), _) = &token {
-                    if lexeme == "do" {
-                        // The tail terms are rendered vertically.
-                        let mut s = "(do\n".to_string();
-                        self.nesting += 1;
-                        s.push_str(&self.format_list_vertical(Token::RightParen)?);
-                        self.nesting -= 1;
-                        s.push_str(&format!(
-                            "\n{})",
-                            " ".repeat(self.nesting * self.indent_size)
-                        ));
-                        s
-                    } else if lexeme == "Func" || lexeme == "if" {
-                        // The first tail term is rendered in same line, the
-                        // rest are rendered vertically.
-                        let mut s = format!("({lexeme} ");
-                        let Some(token) = self.next_token() else {
-                            // #TODO how to handle this?
-                            self.push_error(Error::UnterminatedList);
-                            return Err(Break {});
-                        };
-                        s.push_str(&format!("{}\n", self.format_expr(token)?));
-                        self.nesting += 1;
-                        s.push_str(&self.format_list_vertical(Token::RightParen)?);
-                        self.nesting -= 1;
-                        s.push_str(&format!(
-                            "\n{})",
-                            " ".repeat(self.nesting * self.indent_size)
-                        ));
-                        s
-                    // #TODO custom 
-                    // } else if lexeme == "let" {
-                    } else {
-                        self.put_back_token(token);
-
-                        let mut s = "(".to_string();
-                        s.push_str(&self.format_list_horizontal(Token::RightParen)?);
-                        s.push(')');
-                        s
-                    }
-                } else {
-                    self.put_back_token(token);
-
-                    let mut s = "(".to_string();
-                    s.push_str(&self.format_list_horizontal(Token::RightParen)?);
-                    s.push(')');
-                    s
-                }
-            }
-            Token::LeftBracket => {
-                // Syntactic sugar for a List/Array.
-
+    pub fn format_expr(&mut self, expr: &Expr) -> String {
+        let output = match expr {
+            Expr::Comment(s) => s.clone(),
+            // Expr::Annotation(s) => format!("#{s}"),
+            Expr::String(s) => format!("\"{s}\""),
+            Expr::Symbol(s) => s.clone(),
+            Expr::Int(n) => n.to_string(),
+            Expr::One => "()".to_string(),
+            Expr::Bool(b) => b.to_string(),
+            Expr::Float(n) => n.to_string(),
+            Expr::KeySymbol(s) => format!(":{s}"),
+            Expr::Char(c) => format!(r#"(Char "{c}")"#),
+            Expr::List(_) => todo!(),
+            Expr::Array(items) => {
                 let mut s = "[\n".to_string();
                 self.nesting += 1;
-                s.push_str(&self.format_list_vertical(Token::RightBracket)?);
+                s.push_str(&self.format_vertical(items));
                 self.nesting -= 1;
                 s.push_str(&format!(
                     "\n{}]",
@@ -252,49 +101,136 @@ where
                 ));
                 s
             }
-            Token::LeftBrace => {
-                // Syntactic sugar for a Dict.
-
+            Expr::Dict(dict) => {
                 let mut s = "{\n".to_string();
                 self.nesting += 1;
-                s.push_str(&self.format_dict(Token::RightBrace)?);
+                s.push_str(&self.format_dict(dict));
                 self.nesting -= 1;
                 s.push_str(&format!(
-                    "{}}}",
+                    "\n{}}}",
                     " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
                 ));
                 s
             }
-            Token::RightParen | Token::RightBracket | Token::RightBrace => {
-                // #TODO custom error for this?
-                self.push_error(Error::UnexpectedToken(t));
-                // Parsing can continue.
-                return Ok("".to_owned());
-            }
+            // #TODO no need to format the remaining.
+            Expr::Func(_, _) => todo!(),
+            Expr::Macro(_, _) => todo!(),
+            Expr::ForeignFunc(_) => todo!(),
+            Expr::Do => todo!(),
+            Expr::Let => todo!(),
+            Expr::If(_, _, _) => todo!(),
+            // Expr::Annotation(s) => {
+            //     format!("#{s}")
+            // }
+            // Token::Quote => "'".to_owned(),
+            // Token::LeftParen => {
+            //     // #TODO detect kind of expression and format accordingly!
+            //     // #TODO we need lookahead.
+
+            //     let Some(token) = self.next_token() else {
+            //         // #TODO how to handle this?
+            //         self.push_error(Error::UnterminatedList);
+            //         return Err(Break {});
+            //     };
+
+            //     if let Ranged(Token::Symbol(lexeme), _) = &token {
+            //         if lexeme == "do" {
+            //             // The tail terms are rendered vertically.
+            //             let mut s = "(do\n".to_string();
+            //             self.nesting += 1;
+            //             s.push_str(&self.format_list_vertical(Token::RightParen)?);
+            //             self.nesting -= 1;
+            //             s.push_str(&format!(
+            //                 "\n{})",
+            //                 " ".repeat(self.nesting * self.indent_size)
+            //             ));
+            //             s
+            //         } else if lexeme == "Func" || lexeme == "if" {
+            //             // The first tail term is rendered in same line, the
+            //             // rest are rendered vertically.
+            //             let mut s = format!("({lexeme} ");
+            //             let Some(token) = self.next_token() else {
+            //                 // #TODO how to handle this?
+            //                 self.push_error(Error::UnterminatedList);
+            //                 return Err(Break {});
+            //             };
+            //             s.push_str(&format!("{}\n", self.format_expr(token)?));
+            //             self.nesting += 1;
+            //             s.push_str(&self.format_list_vertical(Token::RightParen)?);
+            //             self.nesting -= 1;
+            //             s.push_str(&format!(
+            //                 "\n{})",
+            //                 " ".repeat(self.nesting * self.indent_size)
+            //             ));
+            //             s
+            //         // #TODO custom
+            //         // } else if lexeme == "let" {
+            //         } else {
+            //             self.put_back_token(token);
+
+            //             let mut s = "(".to_string();
+            //             s.push_str(&self.format_list_horizontal(Token::RightParen)?);
+            //             s.push(')');
+            //             s
+            //         }
+            //     } else {
+            //         self.put_back_token(token);
+
+            //         let mut s = "(".to_string();
+            //         s.push_str(&self.format_list_horizontal(Token::RightParen)?);
+            //         s.push(')');
+            //         s
+            //     }
+            // }
+            // Token::LeftBracket => {
+            //     // Syntactic sugar for a List/Array.
+
+            //     let mut s = "[\n".to_string();
+            //     self.nesting += 1;
+            //     s.push_str(&self.format_list_vertical(Token::RightBracket)?);
+            //     self.nesting -= 1;
+            //     s.push_str(&format!(
+            //         "\n{}]",
+            //         " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+            //     ));
+            //     s
+            // }
+            // Token::LeftBrace => {
+            //     // Syntactic sugar for a Dict.
+
+            //     let mut s = "{\n".to_string();
+            //     self.nesting += 1;
+            //     s.push_str(&self.format_dict(Token::RightBrace)?);
+            //     self.nesting -= 1;
+            //     s.push_str(&format!(
+            //         "{}}}",
+            //         " ".repeat(self.nesting * DEFAULT_INDENT_SIZE)
+            //     ));
+            //     s
+            // }
+            // Token::RightParen | Token::RightBracket | Token::RightBrace => {
+            //     // #TODO custom error for this?
+            //     self.push_error(Error::UnexpectedToken(t));
+            //     // Parsing can continue.
+            //     return Ok("".to_owned());
+            // }
         };
 
-        Ok(output)
+        output
     }
 
-    /// Formats an expression in aestheticall pleasing form.
+    // #Insight
+    // The formatter cannot err.
+
+    /// Formats expressions into an aestheticall pleasing form.
     /// This is the standard textual representation of expressions.
-    pub fn format(&mut self) -> Result<String, Vec<Error>> {
-        let mut output = String::new();
+    pub fn format(&mut self) -> String {
+        let mut output: Vec<String> = Vec::new();
 
-        loop {
-            let Some(token) = self.next_token() else {
-                break;
-            };
-
-            let Ok(s) = self.format_expr(token) else {
-                // A non-recoverable parse error was detected, stop parsing.
-                let errors = std::mem::take(&mut self.errors);
-                return Err(errors);
-            };
-
-            output.push_str(&format!("{s}\n"));
+        for expr in self.exprs {
+            output.push(self.format_expr(&expr.0));
         }
 
-        Ok(output)
+        output.join("\n")
     }
 }

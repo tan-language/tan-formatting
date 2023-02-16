@@ -1,5 +1,5 @@
 use tan::ann::Ann;
-use tan::api::{lex_string, parse_string};
+use tan::api::{lex_string, parse_string_all};
 use tan::error::Error;
 use tan::expr::Expr;
 use tan::lexer::token::Token;
@@ -16,7 +16,7 @@ pub fn lex_file(filename: &str) -> Result<Vec<Ranged<Token>>, Vec<Ranged<Error>>
 }
 
 #[allow(dead_code)]
-pub fn parse_file(filename: &str) -> Result<Ann<Expr>, Vec<Ranged<Error>>> {
+pub fn parse_file(filename: &str) -> Result<Vec<Ann<Expr>>, Vec<Ranged<Error>>> {
     let input = &read_file(filename);
-    parse_string(input)
+    parse_string_all(input)
 }
