@@ -19,25 +19,3 @@
         ]
     }
 ]
-
--- Example data
-[
-    {
-        :family_name "Moschovitis"
-        :birth_date "2000-01-01"
-        :labels [
-            "admin"
-            "owner"
-        ]
-        :given_name "George"
-        :score 98
-    }
-    {
-        :score 100
-        :family_name "Constantopoulos"
-        :labels [
-            "user"
-        ]
-        :given_name "Eleni"
-    }
-]

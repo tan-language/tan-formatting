@@ -19,6 +19,7 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 const DEFAULT_LINE_SIZE: usize = 80;
 
 pub struct Formatter<'a> {
+    // #TODO no need to keep this!
     exprs: &'a [Ann<Expr>],
     nesting: usize,
     indent_size: usize,
