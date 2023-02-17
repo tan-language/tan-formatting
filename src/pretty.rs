@@ -18,7 +18,7 @@ const DEFAULT_LINE_SIZE: usize = 80;
 pub struct Formatter<'a> {
     // #TODO no need to keep this!
     exprs: &'a [Ann<Expr>],
-    nesting: usize,
+    indent: usize,
     indent_size: usize,
     #[allow(dead_code)]
     line_size: usize,
@@ -33,14 +33,13 @@ impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
         Self {
             exprs,
-            nesting: 0,
+            indent: 0,
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
             col: 0,
         }
     }
 
-    // #TODO find better name
     pub fn format_horizontal(&mut self, exprs: &[Expr]) -> String {
         let mut output: Vec<String> = Vec::new();
 
@@ -51,23 +50,18 @@ impl<'a> Formatter<'a> {
         output.join(" ")
     }
 
-    // #TODO find better name
     pub fn format_vertical(&mut self, exprs: &[Expr]) -> String {
         let mut output: Vec<String> = Vec::new();
 
         for expr in exprs {
             let s = self.format_expr(expr);
-            output.push(format!(
-                "{}{s}",
-                " ".repeat(self.nesting * self.indent_size)
-            ));
+            output.push(format!("{}{s}", " ".repeat(self.indent)));
         }
 
         output.join("\n")
     }
 
-    // #TODO rename to format_pairs.
-    pub fn format_dict(&mut self, exprs: &[Expr]) -> String {
+    pub fn format_vertical_pairs(&mut self, exprs: &[Expr]) -> String {
         let mut output: Vec<String> = Vec::new();
 
         for pair in exprs.chunks(2) {
@@ -76,10 +70,7 @@ impl<'a> Formatter<'a> {
             let key = key.to_string(); // #TODO think some more.
             let value = self.format_expr(value);
 
-            output.push(format!(
-                "{}{key} {value}",
-                " ".repeat(self.nesting * self.indent_size)
-            ));
+            output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
         }
 
         output.join("\n")
@@ -114,13 +105,10 @@ impl<'a> Formatter<'a> {
                 if head == "do" {
                     // The tail terms are rendered vertically.
                     let mut s = "(do\n".to_string();
-                    self.nesting += 1;
+                    self.indent += self.indent_size;
                     s.push_str(&self.format_vertical(&tail));
-                    self.nesting -= 1;
-                    s.push_str(&format!(
-                        "\n{})",
-                        " ".repeat(self.nesting * self.indent_size)
-                    ));
+                    self.indent -= self.indent_size;
+                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
                     s
                 } else if head == "Func" || head == "if" {
                     // The first tail term is rendered in same line, the
@@ -132,37 +120,39 @@ impl<'a> Formatter<'a> {
                     let tail_first = &tail_first[0];
                     s.push_str(&format!("{}\n", self.format_expr(tail_first)));
 
-                    self.nesting += 1;
+                    self.indent += self.indent_size;
                     s.push_str(&self.format_vertical(tail_rest));
-                    self.nesting -= 1;
+                    self.indent -= self.indent_size;
 
-                    s.push_str(&format!(
-                        "\n{})",
-                        " ".repeat(self.nesting * self.indent_size)
-                    ));
+                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
 
                     s
                 } else if head == "Array" {
-                    let items: Vec<Expr> = tail.iter().map(|expr| expr.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
                     let mut s = "[\n".to_string();
-                    self.nesting += 1;
-                    s.push_str(&self.format_vertical(&items));
-                    self.nesting -= 1;
-                    s.push_str(&format!(
-                        "\n{}]",
-                        " ".repeat(self.nesting * self.indent_size)
-                    ));
+                    self.indent += self.indent_size;
+                    s.push_str(&self.format_vertical(&tail));
+                    self.indent -= self.indent_size;
+                    s.push_str(&format!("\n{}]", " ".repeat(self.indent)));
                     s
                 } else if head == "Dict" {
-                    let items: Vec<Expr> = tail.iter().map(|expr| expr.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
                     let mut s = "{\n".to_string();
-                    self.nesting += 1;
-                    s.push_str(&self.format_dict(&items));
-                    self.nesting -= 1;
-                    s.push_str(&format!(
-                        "\n{}}}",
-                        " ".repeat(self.nesting * self.indent_size)
-                    ));
+                    self.indent += self.indent_size;
+                    s.push_str(&self.format_vertical_pairs(&tail));
+                    self.indent -= self.indent_size;
+                    s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
+                    s
+                } else if head == "let" {
+                    let mut s = "(let ".to_string();
+
+                    if tail.len() > 4 {
+                        self.indent += 5; // indent = "(let ".len()
+                        s.push_str(self.format_vertical_pairs(&tail).trim_start());
+                        self.indent -= 5;
+                        s.push_str(&format!("\n{})", " ".repeat(self.indent)));
+                    } else {
+                        s.push_str(&self.format_horizontal(&tail));
+                        s.push(')');
+                    }
                     s
                 } else {
                     let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
