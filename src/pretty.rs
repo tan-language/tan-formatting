@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
 use tan::ann::Ann;
 use tan::expr::Expr;
 
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
-// #TODO this is the ugliest code ever written, wip.
 // #TODO rename to `formatter.rs`
 // #TODO optimize formatter to minimize diffs.
 // #TODO try to maintain some empty separator lines.
@@ -70,11 +67,13 @@ impl<'a> Formatter<'a> {
     }
 
     // #TODO rename to format_pairs.
-    pub fn format_dict(&mut self, dict: &HashMap<String, Expr>) -> String {
+    pub fn format_dict(&mut self, exprs: &[Expr]) -> String {
         let mut output: Vec<String> = Vec::new();
 
-        for (key, value) in dict {
-            let key = format!(":{key}"); // #TODO temp solution!
+        for pair in exprs.chunks(2) {
+            let key = &pair[0];
+            let value = &pair[1];
+            let key = key.to_string(); // #TODO think some more.
             let value = self.format_expr(value);
 
             output.push(format!(
@@ -143,6 +142,28 @@ impl<'a> Formatter<'a> {
                     ));
 
                     s
+                } else if head == "Array" {
+                    let items: Vec<Expr> = tail.iter().map(|expr| expr.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
+                    let mut s = "[\n".to_string();
+                    self.nesting += 1;
+                    s.push_str(&self.format_vertical(&items));
+                    self.nesting -= 1;
+                    s.push_str(&format!(
+                        "\n{}]",
+                        " ".repeat(self.nesting * self.indent_size)
+                    ));
+                    s
+                } else if head == "Dict" {
+                    let items: Vec<Expr> = tail.iter().map(|expr| expr.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
+                    let mut s = "{\n".to_string();
+                    self.nesting += 1;
+                    s.push_str(&self.format_dict(&items));
+                    self.nesting -= 1;
+                    s.push_str(&format!(
+                        "\n{}}}",
+                        " ".repeat(self.nesting * self.indent_size)
+                    ));
+                    s
                 } else {
                     let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
                     let mut s = "(".to_string();
@@ -150,29 +171,6 @@ impl<'a> Formatter<'a> {
                     s.push(')');
                     s
                 }
-            }
-            Expr::Array(items) => {
-                let mut s = "[\n".to_string();
-                self.nesting += 1;
-                s.push_str(&self.format_vertical(items));
-                self.nesting -= 1;
-                s.push_str(&format!(
-                    "\n{}]",
-                    " ".repeat(self.nesting * self.indent_size)
-                ));
-                s
-            }
-            Expr::Dict(dict) => {
-                // #TODO argh! insertion order is not kept! must change parser!
-                let mut s = "{\n".to_string();
-                self.nesting += 1;
-                s.push_str(&self.format_dict(dict));
-                self.nesting -= 1;
-                s.push_str(&format!(
-                    "\n{}}}",
-                    " ".repeat(self.nesting * self.indent_size)
-                ));
-                s
             }
             _ => expr.to_string(),
         };

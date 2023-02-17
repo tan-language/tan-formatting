@@ -11,8 +11,6 @@ pub fn format_pretty_handles_data_input() {
     let mut formatter = Formatter::new(&exprs);
     let output = formatter.format();
 
-    // println!("{output}");
-
     let expected_output = read_file("data.pretty.tan");
 
     assert_eq!(output, expected_output);
