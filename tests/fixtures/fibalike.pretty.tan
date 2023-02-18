@@ -6,7 +6,7 @@
         (let round x)
         (let name "dummy"
              first_name "geo"
-             last_name #(min 2) #(max 23) "mosch"
+             last_name #(max 23) #(min 2) "mosch"
              age #Year 25
              is_admin true
              is_guest false

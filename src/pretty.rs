@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use tan::ann::Ann;
 use tan::expr::Expr;
@@ -88,7 +88,10 @@ impl<'a> Formatter<'a> {
             return "".to_string();
         }
 
-        // #TODO sort the annotations by key.
+        // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not.
+
+        // Sort the annotations map, for stable formatting.
+        let ann = BTreeMap::from_iter(ann);
 
         let mut output = String::new();
 
