@@ -13,6 +13,8 @@ pub fn format_pretty_handles_data_input() {
 
     let expected_output = read_file("data.pretty.tan");
 
+    // println!("{output}");
+
     assert_eq!(output, expected_output);
 }
 
@@ -32,6 +34,8 @@ pub fn format_pretty_handles_more_code_input() {
     let mut formatter = Formatter::new(&exprs);
     let output = formatter.format();
     let expected_output = read_file("fibalike.pretty.tan");
+
+    // println!("{output}");
 
     assert_eq!(output, expected_output);
 }

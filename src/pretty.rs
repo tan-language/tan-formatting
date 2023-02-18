@@ -8,6 +8,7 @@ use tan::expr::Expr;
 // #TODO try to maintain some empty separator lines.
 // #TODO consider using tabs to indent?
 // #TODO consider allowing absolutely no parameters for the formatter.
+// #TODO idea: pre-process the input, add artificial separator-line annotations to maintain some of the user's separators?
 
 /// The default indentation size (char count)
 const DEFAULT_INDENT_SIZE: usize = 4;
@@ -40,7 +41,7 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn format_horizontal(&mut self, exprs: &[Expr]) -> String {
+    pub fn format_horizontal(&mut self, exprs: &[Ann<Expr>]) -> String {
         let mut output: Vec<String> = Vec::new();
 
         for expr in exprs {
@@ -50,7 +51,7 @@ impl<'a> Formatter<'a> {
         output.join(" ")
     }
 
-    pub fn format_vertical(&mut self, exprs: &[Expr]) -> String {
+    pub fn format_vertical(&mut self, exprs: &[Ann<Expr>]) -> String {
         let mut output: Vec<String> = Vec::new();
 
         for expr in exprs {
@@ -61,13 +62,13 @@ impl<'a> Formatter<'a> {
         output.join("\n")
     }
 
-    pub fn format_vertical_pairs(&mut self, exprs: &[Expr]) -> String {
+    pub fn format_vertical_pairs(&mut self, exprs: &[Ann<Expr>]) -> String {
         let mut output: Vec<String> = Vec::new();
 
         for pair in exprs.chunks(2) {
             let key = &pair[0];
             let value = &pair[1];
-            let key = key.to_string(); // #TODO think some more.
+            let key = key.0.to_string(); // #TODO think some more.
             let value = self.format_expr(value);
 
             output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
@@ -78,10 +79,13 @@ impl<'a> Formatter<'a> {
 
     // #TODO automatically put `_` separators to numbers.
 
-    pub fn format_expr(&mut self, expr: &Expr) -> String {
+    pub fn format_expr(&mut self, expr: &Ann<Expr>) -> String {
+        let Ann(expr, _ann) = expr;
+
         let output = match expr {
             Expr::Comment(s) => s.clone(),
-            // Expr::Annotation(s) => format!("#{s}"),
+            // #TODO maybe it's better to format annotations from Expr?
+            Expr::Annotation(s) => format!("#{s}"),
             Expr::String(s) => format!("\"{s}\""),
             Expr::Symbol(s) => s.clone(),
             Expr::Int(n) => n.to_string(),
@@ -97,16 +101,16 @@ impl<'a> Formatter<'a> {
 
                 let (head, tail) = terms.split_at(1);
 
-                let head = &head[0].0;
-                let tail: Vec<Expr> = tail.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone!
+                let head = &head[0];
+                // let tail: Vec<Expr> = tail.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone!
 
-                let head = self.format_expr(&head);
+                let head = self.format_expr(head);
 
                 if head == "do" {
                     // The tail terms are rendered vertically.
                     let mut s = "(do\n".to_string();
                     self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(&tail));
+                    s.push_str(&self.format_vertical(tail));
                     self.indent -= self.indent_size;
                     s.push_str(&format!("\n{})", " ".repeat(self.indent)));
                     s
@@ -130,14 +134,14 @@ impl<'a> Formatter<'a> {
                 } else if head == "Array" {
                     let mut s = "[\n".to_string();
                     self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(&tail));
+                    s.push_str(&self.format_vertical(tail));
                     self.indent -= self.indent_size;
                     s.push_str(&format!("\n{}]", " ".repeat(self.indent)));
                     s
                 } else if head == "Dict" {
                     let mut s = "{\n".to_string();
                     self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical_pairs(&tail));
+                    s.push_str(&self.format_vertical_pairs(tail));
                     self.indent -= self.indent_size;
                     s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
                     s
@@ -146,18 +150,18 @@ impl<'a> Formatter<'a> {
 
                     if tail.len() > 4 {
                         self.indent += 5; // indent = "(let ".len()
-                        s.push_str(self.format_vertical_pairs(&tail).trim_start());
+                        s.push_str(self.format_vertical_pairs(tail).trim_start());
                         self.indent -= 5;
                         s.push_str(&format!("\n{})", " ".repeat(self.indent)));
                     } else {
-                        s.push_str(&self.format_horizontal(&tail));
+                        s.push_str(&self.format_horizontal(tail));
                         s.push(')');
                     }
                     s
                 } else {
-                    let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
+                    // let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
                     let mut s = "(".to_string();
-                    s.push_str(&self.format_horizontal(&terms));
+                    s.push_str(&self.format_horizontal(terms));
                     s.push(')');
                     s
                 }
@@ -177,7 +181,7 @@ impl<'a> Formatter<'a> {
         let mut output: Vec<String> = Vec::new();
 
         for expr in self.exprs {
-            output.push(self.format_expr(&expr.0));
+            output.push(self.format_expr(expr));
         }
 
         let output = output.join("\n");
