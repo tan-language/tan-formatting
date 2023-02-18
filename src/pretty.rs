@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tan::ann::Ann;
 use tan::expr::Expr;
 
@@ -77,15 +79,39 @@ impl<'a> Formatter<'a> {
         output.join("\n")
     }
 
+    fn format_annotations(&self, ann: &Option<HashMap<String, Expr>>) -> String {
+        let Some(ann) = ann else {
+            return "".to_string()
+        };
+
+        if ann.len() < 2 {
+            return "".to_string();
+        }
+
+        let mut output = String::new();
+
+        for (key, value) in ann {
+            if key == "range" {
+                continue;
+            } else {
+                // This case handles both (type X) and (key value) annotations.
+                // The value is the whole expression.
+                output.push_str(&format!("#{value} "));
+            }
+        }
+
+        output
+    }
+
     // #TODO automatically put `_` separators to numbers.
 
     pub fn format_expr(&mut self, expr: &Ann<Expr>) -> String {
-        let Ann(expr, _ann) = expr;
+        let Ann(expr, ann) = expr;
 
         let output = match expr {
             Expr::Comment(s) => s.clone(),
             // #TODO maybe it's better to format annotations from Expr?
-            Expr::Annotation(s) => format!("#{s}"),
+            // Expr::Annotation(s) => format!("#{s}"),
             Expr::String(s) => format!("\"{s}\""),
             Expr::Symbol(s) => s.clone(),
             Expr::Int(n) => n.to_string(),
@@ -169,7 +195,7 @@ impl<'a> Formatter<'a> {
             _ => expr.to_string(),
         };
 
-        output
+        format!("{}{output}", self.format_annotations(ann))
     }
 
     // #Insight
