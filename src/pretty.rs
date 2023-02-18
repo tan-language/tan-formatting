@@ -88,11 +88,16 @@ impl<'a> Formatter<'a> {
             return "".to_string();
         }
 
+        // #TODO sort the annotations by key.
+
         let mut output = String::new();
 
         for (key, value) in ann {
             if key == "range" {
                 continue;
+            } else if let Expr::Bool(true) = value {
+                // Abbreviation for true booleans.
+                output.push_str(&format!("#{key} "));
             } else {
                 // This case handles both (type X) and (key value) annotations.
                 // The value is the whole expression.

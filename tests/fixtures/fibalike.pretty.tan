@@ -6,8 +6,8 @@
         (let round x)
         (let name "dummy"
              first_name "geo"
-             last_name "mosch"
-             age 25
+             last_name #(min 2) "mosch"
+             age #Year 25
              is_admin true
              is_guest false
              is_new false
@@ -18,6 +18,6 @@
             (+ (fib (- x 1)) (fib (- x 2)))
         )
     ))
-    (let b #cool (+ 1 2))
+    (let #cool b (+ 1 2))
     (fib 10)
 )
