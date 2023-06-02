@@ -72,21 +72,21 @@ impl<'a> Formatter<'a> {
     pub fn format_vertical_pairs(&mut self, exprs: &[Ann<Expr>]) -> String {
         let mut output: Vec<String> = Vec::new();
 
-        for pair in exprs.chunks(2) {
-            let key = &pair[0];
-            let value = &pair[1];
-            let key = key.0.to_string(); // #TODO think some more.
+        let mut i = 0;
 
-            match value {
+        while i < exprs.len() {
+            let expr = &exprs[i];
+            i += 1;
+            match expr {
                 Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
                 _ => {
+                    let key = expr;
+                    let value = &exprs[i];
+                    i += 1;
                     let value = self.format_expr(value);
                     output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
                 }
             }
-
-            // let value = self.format_expr(value);
-            // output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
         }
 
         output.join("\n")
