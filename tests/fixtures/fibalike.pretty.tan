@@ -2,6 +2,7 @@
     -- Computes the fibonacci function.
     -- Recursive implementation, for demonstration purposes. The fibonacci function
     -- also has an analytic solution.
+
     (let fib (Func (x)
         (let round x)
         (let name "dummy"
@@ -18,6 +19,8 @@
             (+ (fib (- x 1)) (fib (- x 2)))
         )
     ))
+
     (let #cool b (+ 1 2))
+
     (fib 10)
 )

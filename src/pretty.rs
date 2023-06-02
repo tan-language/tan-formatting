@@ -57,8 +57,13 @@ impl<'a> Formatter<'a> {
         let mut output: Vec<String> = Vec::new();
 
         for expr in exprs {
-            let s = self.format_expr(expr);
-            output.push(format!("{}{s}", " ".repeat(self.indent)));
+            match expr {
+                Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
+                _ => {
+                    let s = self.format_expr(expr);
+                    output.push(format!("{}{s}", " ".repeat(self.indent)));
+                }
+            }
         }
 
         output.join("\n")
@@ -71,9 +76,17 @@ impl<'a> Formatter<'a> {
             let key = &pair[0];
             let value = &pair[1];
             let key = key.0.to_string(); // #TODO think some more.
-            let value = self.format_expr(value);
 
-            output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
+            match value {
+                Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
+                _ => {
+                    let value = self.format_expr(value);
+                    output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
+                }
+            }
+
+            // let value = self.format_expr(value);
+            // output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
         }
 
         output.join("\n")
@@ -118,6 +131,7 @@ impl<'a> Formatter<'a> {
 
         let output = match expr {
             Expr::Comment(s) => s.clone(),
+            Expr::TextSeparator => "".to_owned(),
             // #TODO maybe it's better to format annotations from Expr?
             // Expr::Annotation(s) => format!("#{s}"),
             Expr::String(s) => format!("\"{s}\""),
