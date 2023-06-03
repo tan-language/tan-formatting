@@ -32,13 +32,13 @@ pub fn format_pretty_handles_code_input() {
 pub fn format_pretty_handles_more_code_input() {
     let exprs = parse_file("fibalike.tan").unwrap();
 
-    // dbg!(&exprs);
+    dbg!(&exprs);
 
     let mut formatter = Formatter::new(&exprs);
     let output = formatter.format();
     let expected_output = read_file("fibalike.pretty.tan");
 
-    // println!("{output}");
+    println!("{output}");
 
     assert_eq!(output, expected_output);
 }

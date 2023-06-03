@@ -1,28 +1,26 @@
-(do
-    ; Computes the fibonacci function.
-    ; Recursive implementation, for demonstration purposes. The fibonacci function
-    ; also has an analytic solution.
+; Computes the fibonacci function.
+; Recursive implementation, for demonstration purposes. The fibonacci function
+; also has an analytic solution.
+(let fib (Func (x)
+    (let round x)
 
-    (let fib (Func (x)
-        (let round x)
+    (let name "dummy"
+         first_name "geo"
+         last_name #(max 23) #(min 2) "mosch"
+         age #Year 25
+         is_admin true
+         is_guest false
+         is_new false
+    )
 
-        (let name "dummy"
-             first_name "geo"
-             last_name #(max 23) #(min 2) "mosch"
-             age #Year 25
-             is_admin true
-             is_guest false
-             is_new false
-        )
+    (if (< x 3)
+        1
+        ; recursive case
+        (+ (fib (- x 1)) (fib (- x 2)))
+    )
+))
 
-        (if (< x 3)
-            1
-            ; recursive case
-            (+ (fib (- x 1)) (fib (- x 2)))
-        )
-    ))
+(let #cool b (+ 1 2))
 
-    (let #cool b (+ 1 2))
+(fib 10)
 
-    (fib 10)
-)

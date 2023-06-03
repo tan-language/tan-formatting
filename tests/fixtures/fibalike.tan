@@ -1,11 +1,7 @@
-(do
     ; Computes the fibonacci function.
     ; Recursive implementation, for demonstration purposes. The fibonacci function
     ; also has an analytic solution.
-
-
-
-    (let fib            (Func (x)
+            (let fib            (Func (x)
         (let round x)
 
     (let name "dummy" first_name "geo" last_name #(min
@@ -23,4 +19,6 @@
     (let #cool b (+ 1 2))
 
     (fib 10)
-)
+
+
+
