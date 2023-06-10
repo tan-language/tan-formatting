@@ -3,6 +3,8 @@ use std::collections::{BTreeMap, HashMap};
 use tan::ann::Ann;
 use tan::expr::Expr;
 
+use crate::util::ensure_ends_with_empty_line;
+
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
 // #TODO rename to `formatter.rs`
@@ -234,7 +236,8 @@ impl<'a> Formatter<'a> {
 
         let output = output.join("\n");
 
-        // Add an empty line at the end, as a standard practice.
-        format!("{output}\n")
+        let output = ensure_ends_with_empty_line(&output);
+
+        output
     }
 }

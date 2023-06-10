@@ -1,4 +1,5 @@
 pub mod pretty;
+mod util;
 
 use std::error::Error;
 

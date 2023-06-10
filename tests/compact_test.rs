@@ -7,10 +7,10 @@ mod common;
 
 #[test]
 pub fn format_compact_works() {
-    let exprs = parse_file("simple_example.tan").unwrap();
+    let exprs = parse_file("simple-example.tan").unwrap();
     let expr = &exprs[0];
     let output = format_expr_compact(expr);
-    let expected_output = read_file("simple_example.compact.tan");
+    let expected_output = read_file("simple-example.compact.tan");
 
     assert_eq!(output, expected_output);
 }

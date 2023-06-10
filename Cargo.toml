@@ -9,4 +9,5 @@ authors = ["George Moschovitis <gmosx@reizu.org>"]
 edition = "2021"
 
 [dependencies]
+regex = "1"
 tan = { path = "../tan", version = "0.5" }

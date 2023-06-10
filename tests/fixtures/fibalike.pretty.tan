@@ -5,12 +5,12 @@
     (let round x)
 
     (let name "dummy"
-         first_name "geo"
-         last_name #(max 23) #(min 2) "mosch"
+         first-name "geo"
+         last-name #(max 23) #(min 2) "mosch"
          age #Year 25
-         is_admin true
-         is_guest false
-         is_new false
+         is-admin true
+         is-guest false
+         is-new false
     )
 
     (if (< x 3)
@@ -23,4 +23,3 @@
 (let #cool b (+ 1 2))
 
 (fib 10)
-
