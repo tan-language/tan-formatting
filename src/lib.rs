@@ -22,12 +22,12 @@ pub fn format_expr_pretty(_expr: &Expr) -> String {
     todo!()
 }
 
+// #TODO also format error without input.
 // #TODO implement this in ...Tan :)
 // #TODO format the error as symbolic expression.
 // #TODO format the error as JSON.
 // #TODO make more beautiful than Rust.
 // #TODO add as method to Ranged<E: Error>? e.g. `format_pretty`
-
 pub fn format_error_pretty<E: Error>(error: &Ranged<E>, input: &str, url: Option<&str>) -> String {
     let chars = input.chars();
     let Ranged(error, span) = error;
