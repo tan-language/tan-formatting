@@ -230,6 +230,7 @@ impl<'a> Formatter<'a> {
     pub fn format(&mut self) -> String {
         let mut output: Vec<String> = Vec::new();
 
+        // #TODO support look-ahead?
         for expr in self.exprs {
             output.push(self.format_expr(expr));
         }
