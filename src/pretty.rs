@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use tan::ann::Ann;
 use tan::expr::Expr;
 
-use crate::util::ensure_ends_with_empty_line;
+use crate::util::{ensure_ends_with_empty_line, format_float};
 
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
@@ -141,7 +141,7 @@ impl<'a> Formatter<'a> {
             Expr::Int(n) => n.to_string(),
             Expr::One => "()".to_string(),
             Expr::Bool(b) => b.to_string(),
-            Expr::Float(n) => n.to_string(),
+            Expr::Float(n) => format_float(*n),
             Expr::KeySymbol(s) => format!(":{s}"),
             Expr::Char(c) => format!(r#"(Char "{c}")"#),
             Expr::List(terms) => {
