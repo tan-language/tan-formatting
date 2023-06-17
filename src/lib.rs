@@ -79,7 +79,7 @@ pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
 // #TODO add as method to Ranged<E: Error>? e.g. `format_pretty`
 pub fn format_error_pretty(error: &Error, input: &str) -> String {
     let Some(note) = error.notes.first() else {
-        return format!("{}\n at {}", error.kind(), error.file_url);
+        return format!("{}\n at {}", error.kind(), error.file_path);
     };
 
     let prologue = if let Some(range) = &note.range {
@@ -87,12 +87,12 @@ pub fn format_error_pretty(error: &Error, input: &str) -> String {
         format!(
             "{}\n at {}:{}:{}",
             error.kind(),
-            error.file_url,
+            error.file_path,
             position.line + 1,
             position.col + 1,
         )
     } else {
-        format!("{}\n at {}", error.kind(), error.file_url)
+        format!("{}\n at {}", error.kind(), error.file_path)
     };
 
     let notes: Vec<String> = error
