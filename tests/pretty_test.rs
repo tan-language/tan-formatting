@@ -38,7 +38,22 @@ pub fn format_pretty_handles_more_code_input() {
     let output = formatter.format();
     let expected_output = read_file("fibalike.pretty.tan");
 
-    println!("{output}");
+    assert_eq!(output, expected_output);
+}
+
+// #TODO consider renaming `inline` to `side`?
+
+// #[test]
+pub fn format_pretty_handles_inline_comments() {
+    let exprs = parse_file("inline-comments.tan").unwrap();
+
+    // dbg!(&exprs);
+
+    let mut formatter = Formatter::new(&exprs);
+    let output = formatter.format();
+    let expected_output = read_file("inline-comments.pretty.tan");
+
+    eprintln!("{output}");
 
     assert_eq!(output, expected_output);
 }

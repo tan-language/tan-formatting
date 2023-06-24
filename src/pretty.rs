@@ -5,6 +5,12 @@ use tan::expr::Expr;
 
 use crate::util::{ensure_ends_with_empty_line, format_float};
 
+// #TODO create intermediate representation before joining!
+// #TODO align inline/side comments
+// #TODO align vertical pairs (e.g. let)
+
+// #TODO preprocess to handle inline comments?
+
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
 // #TODO rename to `formatter.rs`
@@ -19,6 +25,10 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
+
+struct Span {
+    items: Vec<String>,
+}
 
 pub struct Formatter<'a> {
     // #TODO no need to keep this!
@@ -61,6 +71,14 @@ impl<'a> Formatter<'a> {
         for expr in exprs {
             match expr {
                 Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
+                // Ann(Expr::Comment(_, comment_kind), ..) => {
+                //     println!("==== {:?}", expr);
+                //     let s = match comment_kind {
+                //         CommentKind::Inline => "********".to_owned(),
+                //         _ => self.format_expr(expr),
+                //     };
+                //     output.push(format!("{}{s}", " ".repeat(self.indent)));
+                // }
                 _ => {
                     let s = self.format_expr(expr);
                     output.push(format!("{}{s}", " ".repeat(self.indent)));
@@ -132,7 +150,7 @@ impl<'a> Formatter<'a> {
         let Ann(expr, ann) = expr;
 
         let output = match expr {
-            Expr::Comment(s) => s.clone(),
+            Expr::Comment(s, _) => s.clone(),
             Expr::TextSeparator => "".to_owned(),
             // #TODO maybe it's better to format annotations from Expr?
             // Expr::Annotation(s) => format!("#{s}"),
@@ -152,7 +170,6 @@ impl<'a> Formatter<'a> {
                 let (head, tail) = terms.split_at(1);
 
                 let head = &head[0];
-                // let tail: Vec<Expr> = tail.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone!
 
                 let head = self.format_expr(head);
 
