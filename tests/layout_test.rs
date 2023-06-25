@@ -19,7 +19,7 @@ pub fn arrange_handles_data_input() {
 }
 
 #[test]
-pub fn format_pretty_handles_code_input() {
+pub fn arrange_handles_code_input() {
     let exprs = parse_file("code.tan").unwrap();
     let mut arranger = Arranger::new(&exprs);
     let layout = arranger.arrange();
@@ -28,7 +28,7 @@ pub fn format_pretty_handles_code_input() {
 }
 
 #[test]
-pub fn format_pretty_handles_more_code_input() {
+pub fn arrange_handles_more_code_input() {
     let exprs = parse_file("fibalike.tan").unwrap();
     let mut arranger = Arranger::new(&exprs);
     let layout = arranger.arrange();
@@ -39,10 +39,11 @@ pub fn format_pretty_handles_more_code_input() {
 // #TODO consider renaming `inline` to `side`?
 
 #[test]
-pub fn format_pretty_handles_inline_comments() {
+pub fn arrange_handles_inline_comments() {
     let exprs = parse_file("inline-comments.tan").unwrap();
     let mut arranger = Arranger::new(&exprs);
     let layout = arranger.arrange();
 
+    eprintln!("{:?}", layout);
     dbg!(&layout);
 }

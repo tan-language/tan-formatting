@@ -42,23 +42,15 @@ impl<'a> Arranger<'a> {
         }
     }
 
-    fn arrange_rest(&mut self) -> Vec<Layout> {
-        let mut layouts = Vec::new();
+    fn arrange_next(&mut self) -> Layout {
+        // #TODO should handle inline comment?
 
-        loop {
-            let Some(expr) = self.exprs.next() else {
-                break;
-            };
-
-            let layout = self.arrange_expr(expr);
-
-            layouts.push(layout)
-        }
-
-        layouts
+        // #insight not checking, input to formatter should be valid.
+        let expr = self.exprs.next().unwrap();
+        self.arrange_expr(expr)
     }
 
-    fn arrange_vlist(&mut self) -> Layout {
+    fn arrange_rest(&mut self) -> Vec<Layout> {
         let mut layouts = Vec::new();
 
         loop {
@@ -97,10 +89,10 @@ impl<'a> Arranger<'a> {
             }
         }
 
-        Layout::VList(layouts)
+        layouts
     }
 
-    fn arrange_pairs(&mut self) -> Layout {
+    fn arrange_rest_as_pairs(&mut self) -> Layout {
         let mut layouts = Vec::new();
 
         let mut has_inline_comment = false;
@@ -147,50 +139,85 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_list(&mut self) -> Layout {
-        let Some(Ann(head, ..)) = self.exprs.next() else {
-            // #TODO this should never happen here.
-            return Layout::End;
-        };
+        // #indsight not need to check here.
+        let expr = self.exprs.next().unwrap();
 
         let mut layouts = Vec::new();
 
+        let head = &expr.0;
+
+        // #TODO should decide between (h)list/vlist.
+        // #TODO special formatting for `if`.
+
         match head {
             Expr::Symbol(name) if name == "do" => {
-                layouts.push(Layout::span("(do\n"));
-                layouts.push(Layout::Indent(Box::new(self.arrange_vlist())));
+                layouts.push(Layout::span("(do"));
+                // Always arrange a `do` block vertically.
+                let block = Layout::VList(self.arrange_rest());
+                layouts.push(Layout::Indent(Box::new(block)));
                 layouts.push(Layout::span(")"));
+                Layout::VList(layouts)
             }
             Expr::Symbol(name) if name == "Func" || name == "if" => {
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::span(format!("({name} ")));
                 layouts.push(self.arrange_next());
-                layouts.push(Layout::Indent(Box::new(self.arrange_vlist())));
-                layouts.push(Layout::span(")"));
+                let block = self.arrange_rest();
+                if block.len() > 1 {
+                    layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
+                    layouts.push(Layout::span(")"));
+                    Layout::VList(layouts)
+                } else {
+                    layouts.push(block[0].clone());
+                    layouts.push(Layout::span(")"));
+                    Layout::HList(layouts)
+                }
             }
             Expr::Symbol(name) if name == "Array" => {
-                layouts.push(Layout::span("[\n"));
-                layouts.push(Layout::Indent(Box::new(Layout::VList(self.arrange_rest()))));
+                // #TODO more sophisticated Array formatting needed.
+                // Try to format the array horizontally.
+                layouts.push(Layout::span("["));
+                layouts.push(Layout::HList(self.arrange_rest()));
                 layouts.push(Layout::span("]"));
+                Layout::List(layouts)
             }
             Expr::Symbol(name) if name == "Dict" => {
-                layouts.push(Layout::span("{\n"));
-                layouts.push(Layout::Indent(Box::new(self.arrange_pairs())));
-                layouts.push(Layout::span("}}"));
+                layouts.push(Layout::span("{"));
+                let block = self.arrange_rest();
+                if block.len() > 2 {
+                    layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
+                    layouts.push(Layout::span('}'));
+                    Layout::VList(layouts)
+                } else {
+                    layouts.push(Layout::HList(block));
+                    layouts.push(Layout::span("}"));
+                    Layout::HList(layouts)
+                }
             }
             Expr::Symbol(name) if name == "let" => {
                 layouts.push(Layout::span("(let "));
-                layouts.push(Layout::Indent(Box::new(self.arrange_pairs())));
-                layouts.push(Layout::span(")"));
+                let block = self.arrange_rest_as_pairs();
+                match block {
+                    Layout::HList(_) => {
+                        layouts.push(block);
+                        layouts.push(Layout::span('}'));
+                        Layout::HList(layouts)
+                    },
+                    _ /* Layout::VList */ => {
+                        // #TODO Indent should auto convert to VList
+                        layouts.push(Layout::Indent(Box::new(block)));
+                        layouts.push(Layout::span('}'));
+                        Layout::VList(layouts)
+                    }
+                }
             }
             _ => {
-                // #TODO insert head!
-                layouts.push(Layout::span("("));
+                layouts.push(Layout::span(format!("({head} ")));
                 layouts.push(Layout::HList(self.arrange_rest()));
                 layouts.push(Layout::span(")"));
+                Layout::List(layouts)
             }
         }
-
-        Layout::List(layouts)
     }
 
     fn arrange_expr(&mut self, expr: &Ann<Expr>) -> Layout {
@@ -223,12 +250,6 @@ impl<'a> Arranger<'a> {
         };
 
         layout
-    }
-
-    pub fn arrange_next(&mut self) -> Layout {
-        // #insight not checking, input to formatter should be valid.
-        let expr = self.exprs.next().unwrap();
-        self.arrange_expr(expr)
     }
 
     pub fn arrange(&mut self) -> Vec<Layout> {
