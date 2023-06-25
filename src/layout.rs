@@ -250,6 +250,10 @@ impl<'a> Arranger<'a> {
             _ => Layout::Span(expr.to_string()),
         };
 
+        // #TODO add annotations!
+        // #TODO will be handled with Expr::Ann()
+        // format!("{}{output}", self.format_annotations(ann))
+
         layout
     }
 
