@@ -14,10 +14,9 @@ pub enum Layout {
     /// Horizontal list, separated by SPACE
     HList(Vec<Layout>), // #TODO Could name this Row
     /// Justified vertical list
-    Grid(Vec<Layout>),
+    // Grid(Vec<Layout>),
     Span(String),
     Separator,
-    End,
 }
 
 impl Layout {
@@ -29,6 +28,8 @@ impl Layout {
         Self::HList(list.into())
     }
 }
+
+// #TODO what about annotations?
 
 // #TODO find a better name.
 pub struct Arranger<'a> {
@@ -252,7 +253,7 @@ impl<'a> Arranger<'a> {
         layout
     }
 
-    pub fn arrange(&mut self) -> Vec<Layout> {
-        self.arrange_rest()
+    pub fn arrange(&mut self) -> Layout {
+        Layout::VList(self.arrange_rest())
     }
 }

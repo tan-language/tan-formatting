@@ -1,22 +1,22 @@
-// use common::parse_file;
-// use tan_fmt::pretty::Formatter;
+use common::parse_file;
+use tan_fmt::pretty::Formatter;
 
-// use crate::common::read_file;
+use crate::common::read_file;
 
-// mod common;
+mod common;
 
-// #[test]
-// pub fn format_pretty_handles_data_input() {
-//     let exprs = parse_file("data.tan").unwrap();
-//     let mut formatter = Formatter::new(&exprs);
-//     let output = formatter.format();
+#[test]
+pub fn format_pretty_handles_data_input() {
+    let exprs = parse_file("data.tan").unwrap();
+    let mut formatter = Formatter::new(&exprs);
+    let output = formatter.format();
 
-//     let expected_output = read_file("data.pretty.tan");
+    let expected_output = read_file("data.pretty.tan");
 
-//     // println!("{output}");
+    println!("{output}");
 
-//     assert_eq!(output, expected_output);
-// }
+    // assert_eq!(output, expected_output);
+}
 
 // #[test]
 // pub fn format_pretty_handles_code_input() {
