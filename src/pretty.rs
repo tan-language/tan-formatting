@@ -30,12 +30,9 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
 
-fn apply_indent(s: &str, indent: usize) -> String {
-    format!("{}{s}", " ".repeat(indent))
-}
-
 pub struct Formatter<'a> {
     arranger: Arranger<'a>,
+    indent: usize,
     indent_size: usize,
     #[allow(dead_code)]
     line_size: usize,
@@ -50,14 +47,23 @@ impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
         Self {
             arranger: Arranger::new(exprs),
+            indent: 0,
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
             col: 0,
         }
     }
 
+    fn apply_indent(&self, s: String, should_apply_indent: bool) -> String {
+        if should_apply_indent {
+            format!("{ }{s}", " ".repeat(self.indent))
+        } else {
+            s
+        }
+    }
+
     fn format_annotations(&self, ann: &HashMap<String, Expr>) -> String {
-        if ann.len() < 2 {
+        if ann.is_empty() {
             return "".to_string();
         }
 
@@ -86,30 +92,41 @@ impl<'a> Formatter<'a> {
 
     // #TODO automatically put `_` separators to numbers.
 
-    fn format_layout(&self, layout: &Layout, indent: usize) -> String {
+    fn format_layout(&mut self, layout: &Layout, should_apply_indent: bool) -> String {
         match layout {
-            Layout::Span(s) => s.clone(),
+            Layout::Span(s) => self.apply_indent(s.clone(), should_apply_indent),
             Layout::Join(v) => v
                 .iter()
-                .map(|l| self.format_layout(l, 0))
+                .map(|l| {
+                    let string = self.format_layout(l, false);
+                    self.apply_indent(string, should_apply_indent)
+                })
                 .collect::<Vec<String>>()
                 .join(""),
-            Layout::HList(v) => v
-                .iter()
-                .map(|l| self.format_layout(l, 0))
-                .collect::<Vec<String>>()
-                .join(" "),
+            Layout::HList(v) => {
+                let string = v
+                    .iter()
+                    .map(|l| self.format_layout(l, false))
+                    .collect::<Vec<String>>()
+                    .join(" ");
+                self.apply_indent(string, should_apply_indent)
+            }
             Layout::VList(v) => v
                 .iter()
-                .map(|l| apply_indent(&self.format_layout(l, indent), indent))
+                .map(|l| self.format_layout(l, true))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            Layout::Indent(l) => self.format_layout(l, indent + self.indent_size),
-            Layout::Ann(ann, l) => format!(
-                "{}{}",
-                self.format_annotations(ann),
-                self.format_layout(l, 0)
-            ),
+            Layout::Indent(l) => {
+                self.indent += self.indent_size;
+                let string = self.format_layout(l, true);
+                self.indent -= self.indent_size;
+                string
+            }
+            Layout::Ann(ann, l) => {
+                let ann = self.format_annotations(ann);
+                let string = self.format_layout(l, false);
+                self.apply_indent(format!("{ann}{string}"), should_apply_indent)
+            }
             Layout::Separator => "".to_owned(),
         }
     }
@@ -118,7 +135,9 @@ impl<'a> Formatter<'a> {
     /// This is the standard textual representation of expressions.
     pub fn format(mut self) -> String {
         let layout = self.arranger.arrange();
-        let output = self.format_layout(&layout, 0);
+        // eprintln!("{:?}", &layout);
+        // dbg!(&layout);
+        let output = self.format_layout(&layout, false);
         let output = ensure_ends_with_empty_line(&output);
         output
     }
