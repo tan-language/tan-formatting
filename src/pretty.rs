@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use tan::ann::Ann;
 use tan::expr::Expr;
+use tan::util::put_back_iterator::PutBackIterator;
 
 use crate::util::{ensure_ends_with_empty_line, format_float};
 
@@ -26,13 +27,9 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
 
-struct Span {
-    items: Vec<String>,
-}
-
 pub struct Formatter<'a> {
     // #TODO no need to keep this!
-    exprs: &'a [Ann<Expr>],
+    exprs: PutBackIterator<'a, Ann<Expr>>,
     indent: usize,
     indent_size: usize,
     #[allow(dead_code)]
@@ -47,7 +44,7 @@ pub struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
         Self {
-            exprs,
+            exprs: PutBackIterator::new(exprs),
             indent: 0,
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
@@ -144,99 +141,161 @@ impl<'a> Formatter<'a> {
         output
     }
 
-    // #TODO automatically put `_` separators to numbers.
+    pub fn format_rest(&mut self) -> Vec<Layout> {
+        self.exprs.map(|_| self.format_expr()).collect()
+    }
 
-    pub fn format_expr(&mut self, expr: &Ann<Expr>) -> String {
-        let Ann(expr, ann) = expr;
+    pub fn format_vlist(&mut self) -> Layout {
+        Layout::VList(self.format_rest())
+    }
 
-        let output = match expr {
-            Expr::Comment(s, _) => s.clone(),
-            Expr::TextSeparator => "".to_owned(),
-            // #TODO maybe it's better to format annotations from Expr?
-            // Expr::Annotation(s) => format!("#{s}"),
-            Expr::String(s) => format!("\"{s}\""),
-            Expr::Symbol(s) => s.clone(),
-            Expr::Int(n) => n.to_string(),
-            Expr::One => "()".to_string(),
-            Expr::Bool(b) => b.to_string(),
-            Expr::Float(n) => format_float(*n),
-            Expr::KeySymbol(s) => format!(":{s}"),
-            Expr::Char(c) => format!(r#"(Char "{c}")"#),
-            Expr::List(terms) => {
-                if terms.is_empty() {
-                    return "()".to_owned();
-                }
-
-                let (head, tail) = terms.split_at(1);
-
-                let head = &head[0];
-
-                let head = self.format_expr(head);
-
-                if head == "do" {
-                    // The tail terms are rendered vertically.
-                    let mut s = "(do\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-                    s
-                } else if head == "Func" || head == "if" {
-                    // The first tail term is rendered in same line, the
-                    // rest are rendered vertically.
-                    let mut s = format!("({head} ");
-
-                    let (tail_first, tail_rest) = tail.split_at(1);
-
-                    let tail_first = &tail_first[0];
-                    s.push_str(&format!("{}\n", self.format_expr(tail_first)));
-
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail_rest));
-                    self.indent -= self.indent_size;
-
-                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-
-                    s
-                } else if head == "Array" {
-                    let mut s = "[\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{}]", " ".repeat(self.indent)));
-                    s
-                } else if head == "Dict" {
-                    let mut s = "{\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical_pairs(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
-                    s
-                } else if head == "let" {
-                    let mut s = "(let ".to_string();
-
-                    if tail.len() > 4 {
-                        self.indent += 5; // indent = "(let ".len()
-                        s.push_str(self.format_vertical_pairs(tail).trim_start());
-                        self.indent -= 5;
-                        s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-                    } else {
-                        s.push_str(&self.format_horizontal(tail));
-                        s.push(')');
-                    }
-                    s
-                } else {
-                    // let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
-                    let mut s = "(".to_string();
-                    s.push_str(&self.format_horizontal(terms));
-                    s.push(')');
-                    s
-                }
-            }
-            _ => expr.to_string(),
+    // #TODO consider format_terms
+    pub fn format_list(&mut self) -> Layout {
+        let Some(Ann(head, ..)) = self.exprs.next() else {
+            // #TODO this should never happen here.
+            return Layout::End;
         };
 
-        format!("{}{output}", self.format_annotations(ann))
+        let mut layouts = Vec::new();
+
+        match head {
+            Expr::Symbol(name) if name == "do" => {
+                layouts.push(Layout::span("(do\n"));
+                layouts.push(Layout::Indent(Box::new(self.format_vlist())));
+                layouts.push(Layout::span(")"));
+            }
+            Expr::Symbol(name) if name == "Func" || name == "if" => {
+                layouts.push(Layout::span(format!("({name} ")));
+                // The first expr is rendered inline, the rest are rendered vertically.
+                layouts.push(self.format_expr());
+                layouts.push(Layout::Indent(Box::new(self.format_vlist())));
+                layouts.push(Layout::span(")"));
+            }
+            Expr::Symbol(name) if name == "Array" => {
+                layouts.push(Layout::span("[\n"));
+                layouts.push(Layout::Indent(Box::new(Layout::VList(self.format_rest()))));
+                layouts.push(Layout::span("]"));
+            }
+            Expr::Symbol(name) if name == "Dict" => {
+                //     let mut s = "{\n".to_string();
+                //     self.indent += self.indent_size;
+                //     s.push_str(&self.format_vertical_pairs(tail));
+                //     self.indent -= self.indent_size;
+                //     s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
+                layouts.push(Layout::span("{\n"));
+                // #TODO!
+                layouts.push(Layout::Indent(Box::new(Layout::VList(self.format_rest()))));
+                layouts.push(Layout::span("}}"));
+            }
+            Expr::Symbol(name) if name == "let" => {
+                todo!()
+            }
+            _ => {
+                layouts.push(Layout::span("("));
+                layouts.push(Layout::HList(self.format_rest()));
+                layouts.push(Layout::span(")"));
+            }
+        }
+
+        Layout::List(layouts)
+
+        // if head == "do" {
+        //     // The tail terms are rendered vertically.
+        //     let mut s = "(do\n".to_string();
+        //     self.indent += self.indent_size;
+        //     s.push_str(&self.format_vertical(tail));
+        //     self.indent -= self.indent_size;
+        //     s.push_str(&format!("\n{})", " ".repeat(self.indent)));
+        //     s
+        // } else if head == "Func" || head == "if" {
+        //     // The first tail term is rendered in same line, the
+        //     // rest are rendered vertically.
+        //     let mut s = format!("({head} ");
+
+        //     let (tail_first, tail_rest) = tail.split_at(1);
+
+        //     let tail_first = &tail_first[0];
+        //     s.push_str(&format!("{}\n", self.format_expr(tail_first)));
+
+        //     self.indent += self.indent_size;
+        //     s.push_str(&self.format_vertical(tail_rest));
+        //     self.indent -= self.indent_size;
+
+        //     s.push_str(&format!("\n{})", " ".repeat(self.indent)));
+
+        //     s
+        // } else if head == "Array" {
+        //     let mut s = "[\n".to_string();
+        //     self.indent += self.indent_size;
+        //     s.push_str(&self.format_vertical(tail));
+        //     self.indent -= self.indent_size;
+        //     s.push_str(&format!("\n{}]", " ".repeat(self.indent)));
+        //     s
+        // } else if head == "Dict" {
+        //     let mut s = "{\n".to_string();
+        //     self.indent += self.indent_size;
+        //     s.push_str(&self.format_vertical_pairs(tail));
+        //     self.indent -= self.indent_size;
+        //     s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
+        //     s
+        // } else if head == "let" {
+        //     let mut s = "(let ".to_string();
+
+        //     if tail.len() > 4 {
+        //         self.indent += 5; // indent = "(let ".len()
+        //         s.push_str(self.format_vertical_pairs(tail).trim_start());
+        //         self.indent -= 5;
+        //         s.push_str(&format!("\n{})", " ".repeat(self.indent)));
+        //     } else {
+        //         s.push_str(&self.format_horizontal(tail));
+        //         s.push(')');
+        //     }
+        //     s
+        // } else {
+        //     // let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
+        //     let mut s = "(".to_string();
+        //     s.push_str(&self.format_horizontal(terms));
+        //     s.push(')');
+        //     s
+        // }
+    }
+
+    // #TODO automatically put `_` separators to numbers.
+
+    pub fn format_expr(&mut self) -> Layout {
+        let Some(expr) = self.exprs.next() else {
+            return Layout::End;
+        };
+
+        let Ann(expr, ann) = expr;
+
+        let layout = match expr {
+            Expr::Comment(s, _) => Layout::Span(s.clone()),
+            Expr::TextSeparator => Layout::Separator, // #TODO different impl!
+            // #TODO maybe it's better to format annotations from Expr?
+            // Expr::Annotation(s) => format!("#{s}"),
+            Expr::String(s) => Layout::Span(format!("\"{s}\"")),
+            Expr::Symbol(s) => Layout::Span(s.clone()),
+            Expr::Int(n) => Layout::Span(n.to_string()),
+            Expr::One => Layout::Span("()".to_string()),
+            Expr::Bool(b) => Layout::Span(b.to_string()),
+            Expr::Float(n) => Layout::Span(format_float(*n)),
+            Expr::KeySymbol(s) => Layout::Span(format!(":{s}")),
+            Expr::Char(c) => Layout::Span(format!(r#"(Char "{c}")"#)),
+            Expr::List(exprs) => {
+                if exprs.is_empty() {
+                    return Layout::Span("()".to_owned());
+                }
+
+                // #insight Recursive data structure, we recurse.
+
+                let list_formatter = Formatter::new(exprs);
+                list_formatter.format_list()
+            }
+            _ => Layout::Span(expr.to_string()),
+        };
+
+        layout
     }
 
     // #Insight
@@ -245,14 +304,26 @@ impl<'a> Formatter<'a> {
     /// Formats expressions into an aestheticall pleasing form.
     /// This is the standard textual representation of expressions.
     pub fn format(&mut self) -> String {
-        let mut output: Vec<String> = Vec::new();
+        let mut output: Vec<Layout> = Vec::new();
 
-        // #TODO support look-ahead?
-        for expr in self.exprs {
-            output.push(self.format_expr(expr));
+        loop {
+            let layout = self.format_expr();
+
+            if layout == Layout::End {
+                break;
+            }
+
+            output.push(layout);
         }
 
-        let output = output.join("\n");
+        // for expr in self.exprs {
+        //     output.push(self.format_expr(expr));
+        // }
+
+        // let output = output.join("\n");
+
+        // #TODO render layout
+        let output = "TODO";
 
         let output = ensure_ends_with_empty_line(&output);
 
