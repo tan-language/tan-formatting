@@ -180,8 +180,6 @@ impl<'a> Formatter<'a> {
     // }
 
     fn format_layout(&self, layout: &Layout, indent: usize) -> String {
-        let mut output = String::new();
-
         match layout {
             Layout::Span(s) => s.clone(),
             Layout::List(v) => v
@@ -201,7 +199,6 @@ impl<'a> Formatter<'a> {
                 .join("\n"),
             Layout::Indent(l) => self.format_layout(l, indent + self.indent_size),
             Layout::Separator => "\n".to_owned(),
-            _ => "TODO".to_owned(),
         }
     }
 

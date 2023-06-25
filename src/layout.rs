@@ -201,13 +201,13 @@ impl<'a> Arranger<'a> {
                 match block {
                     Layout::HList(_) => {
                         layouts.push(block);
-                        layouts.push(Layout::span('}'));
+                        layouts.push(Layout::span(')'));
                         Layout::HList(layouts)
                     },
                     _ /* Layout::VList */ => {
                         // #TODO Indent should auto convert to VList
                         layouts.push(Layout::Indent(Box::new(block)));
-                        layouts.push(Layout::span('}'));
+                        layouts.push(Layout::span(')'));
                         Layout::VList(layouts)
                     }
                 }

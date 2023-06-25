@@ -9,8 +9,8 @@ mod common;
 pub fn format_pretty_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
     let mut formatter = Formatter::new(&exprs);
-    let output = formatter.format();
 
+    let output = formatter.format();
     let expected_output = read_file("data.pretty.tan");
 
     println!("{output}");
@@ -22,6 +22,7 @@ pub fn format_pretty_handles_data_input() {
 // pub fn format_pretty_handles_code_input() {
 //     let exprs = parse_file("code.tan").unwrap();
 //     let mut formatter = Formatter::new(&exprs);
+
 //     let output = formatter.format();
 //     let expected_output = read_file("code.pretty.tan");
 
@@ -43,17 +44,15 @@ pub fn format_pretty_handles_data_input() {
 
 // // #TODO consider renaming `inline` to `side`?
 
-// // #[test]
-// pub fn format_pretty_handles_inline_comments() {
-//     let exprs = parse_file("inline-comments.tan").unwrap();
+#[test]
+pub fn format_pretty_handles_inline_comments() {
+    let exprs = parse_file("inline-comments.tan").unwrap();
+    let mut formatter = Formatter::new(&exprs);
 
-//     // dbg!(&exprs);
+    let output = formatter.format();
+    let expected_output = read_file("inline-comments.pretty.tan");
 
-//     let mut formatter = Formatter::new(&exprs);
-//     let output = formatter.format();
-//     let expected_output = read_file("inline-comments.pretty.tan");
+    eprintln!("{output}");
 
-//     eprintln!("{output}");
-
-//     assert_eq!(output, expected_output);
-// }
+    // assert_eq!(output, expected_output);
+}
