@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
 
 use crate::util::format_float;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub enum Layout {
     // #TODO could name this layout 'Cell' or Fragment
     /// Indentation block
@@ -13,9 +15,8 @@ pub enum Layout {
     VList(Vec<Layout>), // #TODO Could name this Column
     /// Horizontal list, separated by SPACE
     HList(Vec<Layout>), // #TODO Could name this Row
-    /// Justified vertical list
-    // Grid(Vec<Layout>),
     Span(String),
+    Ann(HashMap<String, Expr>, Box<Layout>),
     Separator,
 }
 
@@ -222,7 +223,7 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_expr(&mut self, expr: &Ann<Expr>) -> Layout {
-        let Ann(expr, _) = expr;
+        let Ann(expr, ann) = expr;
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Span(s.clone()),
@@ -250,11 +251,11 @@ impl<'a> Arranger<'a> {
             _ => Layout::Span(expr.to_string()),
         };
 
-        // #TODO add annotations!
-        // #TODO will be handled with Expr::Ann()
-        // format!("{}{output}", self.format_annotations(ann))
-
-        layout
+        if let Some(ann) = ann {
+            Layout::Ann(ann.clone(), Box::new(layout))
+        } else {
+            layout
+        }
     }
 
     pub fn arrange(&mut self) -> Layout {

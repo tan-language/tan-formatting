@@ -2,9 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use tan::ann::Ann;
 use tan::expr::Expr;
-use tan::util::put_back_iterator::PutBackIterator;
 
-use crate::util::format_float;
 use crate::{
     layout::{Arranger, Layout},
     util::ensure_ends_with_empty_line,
@@ -58,37 +56,33 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    // fn format_annotations(&self, ann: &Option<HashMap<String, Expr>>) -> String {
-    //     let Some(ann) = ann else {
-    //         return "".to_string()
-    //     };
+    fn format_annotations(&self, ann: &HashMap<String, Expr>) -> String {
+        if ann.len() < 2 {
+            return "".to_string();
+        }
 
-    //     if ann.len() < 2 {
-    //         return "".to_string();
-    //     }
+        // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not?
 
-    //     // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not.
+        // Sort the annotations map, for stable formatting.
+        let ann = BTreeMap::from_iter(ann);
 
-    //     // Sort the annotations map, for stable formatting.
-    //     let ann = BTreeMap::from_iter(ann);
+        let mut output = String::new();
 
-    //     let mut output = String::new();
+        for (key, value) in ann {
+            if key == "range" {
+                continue;
+            } else if let Expr::Bool(true) = value {
+                // Abbreviation for true booleans.
+                output.push_str(&format!("#{key} "));
+            } else {
+                // This case handles both (type X) and (key value) annotations.
+                // The value is the whole expression.
+                output.push_str(&format!("#{value} "));
+            }
+        }
 
-    //     for (key, value) in ann {
-    //         if key == "range" {
-    //             continue;
-    //         } else if let Expr::Bool(true) = value {
-    //             // Abbreviation for true booleans.
-    //             output.push_str(&format!("#{key} "));
-    //         } else {
-    //             // This case handles both (type X) and (key value) annotations.
-    //             // The value is the whole expression.
-    //             output.push_str(&format!("#{value} "));
-    //         }
-    //     }
-
-    //     output
-    // }
+        output
+    }
 
     // #TODO automatically put `_` separators to numbers.
 
@@ -111,6 +105,11 @@ impl<'a> Formatter<'a> {
                 .collect::<Vec<String>>()
                 .join("\n"),
             Layout::Indent(l) => self.format_layout(l, indent + self.indent_size),
+            Layout::Ann(ann, l) => format!(
+                "{}{}",
+                self.format_annotations(ann),
+                self.format_layout(l, indent)
+            ),
             Layout::Separator => "\n".to_owned(),
         }
     }
