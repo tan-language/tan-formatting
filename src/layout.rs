@@ -161,8 +161,10 @@ impl<'a> Arranger<'a> {
             }
             Expr::Symbol(name) if name == "Func" || name == "if" => {
                 // The first expr is rendered inline, the rest are rendered vertically.
-                layouts.push(Layout::span(format!("({name}")));
-                layouts.push(self.arrange_next());
+                layouts.push(Layout::HList(vec![
+                    Layout::span(format!("({name}")),
+                    self.arrange_next(),
+                ]));
                 let block = self.arrange_rest();
                 if block.len() > 1 {
                     layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
@@ -236,10 +238,15 @@ impl<'a> Arranger<'a> {
                 }
             }
             _ => {
-                layouts.push(Layout::span(format!("({head} ")));
-                layouts.push(Layout::HList(self.arrange_rest()));
+                // Function call.
+                layouts.push(Layout::span(format!("({head}")));
+                let args = self.arrange_rest();
+                if !args.is_empty() {
+                    layouts.push(Layout::span(" "));
+                    layouts.push(Layout::HList(self.arrange_rest()));
+                }
                 layouts.push(Layout::span(")"));
-                Layout::VList(layouts)
+                Layout::Join(layouts)
             }
         }
     }

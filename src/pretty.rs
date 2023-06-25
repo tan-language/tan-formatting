@@ -95,14 +95,14 @@ impl<'a> Formatter<'a> {
     fn format_layout(&mut self, layout: &Layout, should_apply_indent: bool) -> String {
         match layout {
             Layout::Span(s) => self.apply_indent(s.clone(), should_apply_indent),
-            Layout::Join(v) => v
-                .iter()
-                .map(|l| {
-                    let string = self.format_layout(l, false);
-                    self.apply_indent(string, should_apply_indent)
-                })
-                .collect::<Vec<String>>()
-                .join(""),
+            Layout::Join(v) => {
+                let string = v
+                    .iter()
+                    .map(|l| self.format_layout(l, false))
+                    .collect::<Vec<String>>()
+                    .join("");
+                self.apply_indent(string, should_apply_indent)
+            }
             Layout::HList(v) => {
                 let string = v
                     .iter()
