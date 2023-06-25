@@ -9,6 +9,8 @@ use crate::util::format_float;
 pub enum Layout {
     /// Indentation block
     Indent(Box<Layout>),
+    /// List, to be joined, no separator.
+    Join(Vec<Layout>),
     /// Vertical list, separated by EOL
     VList(Vec<Layout>), // #TODO Could name this Column
     /// Horizontal list, separated by SPACE
@@ -117,7 +119,9 @@ impl<'a> Arranger<'a> {
                             self.exprs.put_back(expr2);
                         }
                     }
-                    _ => {}
+                    _ => {
+                        self.exprs.put_back(expr2);
+                    }
                 }
             };
 
@@ -165,30 +169,52 @@ impl<'a> Arranger<'a> {
                     layouts.push(Layout::span(")"));
                     Layout::VList(layouts)
                 } else {
+                    layouts.push(Layout::span(" "));
                     layouts.push(block[0].clone());
                     layouts.push(Layout::span(")"));
-                    Layout::HList(layouts)
+                    Layout::Join(layouts)
                 }
             }
             Expr::Symbol(name) if name == "Array" => {
                 // #TODO more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
                 layouts.push(Layout::span("["));
-                layouts.push(Layout::HList(self.arrange_rest()));
-                layouts.push(Layout::span("]"));
-                Layout::VList(layouts)
+                let block = self.arrange_rest();
+                if block.len() > 0 {
+                    match &block[0] {
+                        // Heuristic: if the array includes blocks, arrange
+                        // vertically.
+                        Layout::VList(_) | Layout::Indent(_) => {
+                            layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
+                            layouts.push(Layout::span("]"));
+                            Layout::VList(layouts)
+                        }
+                        _ => {
+                            layouts.push(Layout::HList(block));
+                            layouts.push(Layout::span("]"));
+                            Layout::Join(layouts)
+                        }
+                    }
+                } else {
+                    layouts.push(Layout::span("]"));
+                    Layout::Join(layouts)
+                }
             }
             Expr::Symbol(name) if name == "Dict" => {
                 layouts.push(Layout::span("{"));
-                let block = self.arrange_rest();
-                if block.len() > 2 {
-                    layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
-                    layouts.push(Layout::span('}'));
-                    Layout::VList(layouts)
-                } else {
-                    layouts.push(Layout::HList(block));
-                    layouts.push(Layout::span("}"));
-                    Layout::HList(layouts)
+                let block = self.arrange_rest_as_pairs();
+                match block {
+                    Layout::HList(_) => {
+                        layouts.push(block);
+                        layouts.push(Layout::span('}'));
+                        Layout::Join(layouts)
+                    },
+                    _ /* Layout::VList */ => {
+                        // #TODO Indent should auto convert to VList
+                        layouts.push(Layout::Indent(Box::new(block)));
+                        layouts.push(Layout::span('}'));
+                        Layout::VList(layouts)
+                    }
                 }
             }
             Expr::Symbol(name) if name == "let" => {
@@ -196,9 +222,10 @@ impl<'a> Arranger<'a> {
                 let block = self.arrange_rest_as_pairs();
                 match block {
                     Layout::HList(_) => {
+                        layouts.push(Layout::span(" "));
                         layouts.push(block);
                         layouts.push(Layout::span(')'));
-                        Layout::HList(layouts)
+                        Layout::Join(layouts)
                     },
                     _ /* Layout::VList */ => {
                         // #TODO Indent should auto convert to VList

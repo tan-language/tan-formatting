@@ -89,9 +89,14 @@ impl<'a> Formatter<'a> {
     fn format_layout(&self, layout: &Layout, indent: usize) -> String {
         match layout {
             Layout::Span(s) => s.clone(),
+            Layout::Join(v) => v
+                .iter()
+                .map(|l| self.format_layout(l, 0))
+                .collect::<Vec<String>>()
+                .join(""),
             Layout::HList(v) => v
                 .iter()
-                .map(|l| self.format_layout(l, indent))
+                .map(|l| self.format_layout(l, 0))
                 .collect::<Vec<String>>()
                 .join(" "),
             Layout::VList(v) => v
@@ -103,7 +108,7 @@ impl<'a> Formatter<'a> {
             Layout::Ann(ann, l) => format!(
                 "{}{}",
                 self.format_annotations(ann),
-                self.format_layout(l, indent)
+                self.format_layout(l, 0)
             ),
             Layout::Separator => "".to_owned(),
         }
@@ -113,7 +118,6 @@ impl<'a> Formatter<'a> {
     /// This is the standard textual representation of expressions.
     pub fn format(mut self) -> String {
         let layout = self.arranger.arrange();
-        eprintln!("{:?}", &layout);
         let output = self.format_layout(&layout, 0);
         let output = ensure_ends_with_empty_line(&output);
         output
