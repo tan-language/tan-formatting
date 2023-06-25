@@ -113,6 +113,7 @@ impl<'a> Formatter<'a> {
     /// This is the standard textual representation of expressions.
     pub fn format(mut self) -> String {
         let layout = self.arranger.arrange();
+        eprintln!("{:?}", &layout);
         let output = self.format_layout(&layout, 0);
         let output = ensure_ends_with_empty_line(&output);
         output

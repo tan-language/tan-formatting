@@ -4,9 +4,9 @@ use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
 
 use crate::util::format_float;
 
+// #TODO could name this layout 'Cell' or Fragment
 #[derive(Clone, Debug)]
 pub enum Layout {
-    // #TODO could name this layout 'Cell' or Fragment
     /// Indentation block
     Indent(Box<Layout>),
     /// Vertical list, separated by EOL
@@ -28,8 +28,6 @@ impl Layout {
     }
 }
 
-// #TODO what about annotations?
-
 // #TODO find a better name.
 pub struct Arranger<'a> {
     exprs: PutBackIterator<'a, Ann<Expr>>,
@@ -44,7 +42,6 @@ impl<'a> Arranger<'a> {
 
     fn arrange_next(&mut self) -> Layout {
         // #TODO should handle inline comment?
-
         // #insight not checking, input to formatter should be valid.
         let expr = self.exprs.next().unwrap();
         self.arrange_expr(expr)
@@ -226,7 +223,6 @@ impl<'a> Arranger<'a> {
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Span(s.clone()),
             Expr::TextSeparator => Layout::Separator, // #TODO different impl!
-            // #TODO maybe it's better to format annotations from Expr?
             // Expr::Annotation(s) => format!("#{s}"),
             Expr::String(s) => Layout::Span(format!("\"{s}\"")),
             Expr::Symbol(s) => Layout::Span(s.clone()),
@@ -250,10 +246,16 @@ impl<'a> Arranger<'a> {
         };
 
         if let Some(ann) = ann {
-            Layout::Ann(ann.clone(), Box::new(layout))
-        } else {
-            layout
+            if ann.len() > 1 {
+                // #TODO give special key to implicit range annotation.
+                // Remove the range annotation.
+                let mut ann = ann.clone();
+                ann.remove("range");
+                return Layout::Ann(ann, Box::new(layout));
+            }
         }
+
+        layout
     }
 
     pub fn arrange(&mut self) -> Layout {
