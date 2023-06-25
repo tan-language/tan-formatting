@@ -9,8 +9,6 @@ pub enum Layout {
     // #TODO could name this layout 'Cell' or Fragment
     /// Indentation block
     Indent(Box<Layout>),
-    /// List, no separator
-    List(Vec<Layout>), // #TODO Could name this SpanMany, or Join
     /// Vertical list, separated by EOL
     VList(Vec<Layout>), // #TODO Could name this Column
     /// Horizontal list, separated by SPACE
@@ -162,7 +160,7 @@ impl<'a> Arranger<'a> {
             }
             Expr::Symbol(name) if name == "Func" || name == "if" => {
                 // The first expr is rendered inline, the rest are rendered vertically.
-                layouts.push(Layout::span(format!("({name} ")));
+                layouts.push(Layout::span(format!("({name}")));
                 layouts.push(self.arrange_next());
                 let block = self.arrange_rest();
                 if block.len() > 1 {
@@ -181,7 +179,7 @@ impl<'a> Arranger<'a> {
                 layouts.push(Layout::span("["));
                 layouts.push(Layout::HList(self.arrange_rest()));
                 layouts.push(Layout::span("]"));
-                Layout::List(layouts)
+                Layout::VList(layouts)
             }
             Expr::Symbol(name) if name == "Dict" => {
                 layouts.push(Layout::span("{"));
@@ -197,7 +195,7 @@ impl<'a> Arranger<'a> {
                 }
             }
             Expr::Symbol(name) if name == "let" => {
-                layouts.push(Layout::span("(let "));
+                layouts.push(Layout::span("(let"));
                 let block = self.arrange_rest_as_pairs();
                 match block {
                     Layout::HList(_) => {
@@ -217,7 +215,7 @@ impl<'a> Arranger<'a> {
                 layouts.push(Layout::span(format!("({head} ")));
                 layouts.push(Layout::HList(self.arrange_rest()));
                 layouts.push(Layout::span(")"));
-                Layout::List(layouts)
+                Layout::VList(layouts)
             }
         }
     }

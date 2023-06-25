@@ -89,11 +89,6 @@ impl<'a> Formatter<'a> {
     fn format_layout(&self, layout: &Layout, indent: usize) -> String {
         match layout {
             Layout::Span(s) => s.clone(),
-            Layout::List(v) => v
-                .iter()
-                .map(|l| self.format_layout(l, indent))
-                .collect::<Vec<String>>()
-                .join(""),
             Layout::HList(v) => v
                 .iter()
                 .map(|l| self.format_layout(l, indent))
@@ -110,7 +105,7 @@ impl<'a> Formatter<'a> {
                 self.format_annotations(ann),
                 self.format_layout(l, indent)
             ),
-            Layout::Separator => "\n".to_owned(),
+            Layout::Separator => "".to_owned(),
         }
     }
 

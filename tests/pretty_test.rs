@@ -52,7 +52,7 @@ pub fn format_pretty_handles_inline_comments() {
     let output = formatter.format();
     let expected_output = read_file("inline-comments.pretty.tan");
 
-    eprintln!("{output}");
+    // eprintln!("{output}");
 
-    // assert_eq!(output, expected_output);
+    assert_eq!(output, expected_output);
 }
