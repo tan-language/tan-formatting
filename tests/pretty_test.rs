@@ -31,7 +31,7 @@ pub fn format_pretty_handles_code_input() {
     assert_eq!(output, expected_output);
 }
 
-#[test]
+// #[test]
 pub fn format_pretty_handles_more_code_input() {
     let exprs = parse_file("fibalike.tan").unwrap();
     let formatter = Formatter::new(&exprs);

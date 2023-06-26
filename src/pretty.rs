@@ -116,10 +116,11 @@ impl<'a> Formatter<'a> {
                 .map(|l| self.format_layout(l, true))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            Layout::Indent(l) => {
-                self.indent += self.indent_size;
+            Layout::Indent(l, indent_size) => {
+                let indent_size = indent_size.unwrap_or(self.indent_size);
+                self.indent += indent_size;
                 let string = self.format_layout(l, true);
-                self.indent -= self.indent_size;
+                self.indent -= indent_size;
                 string
             }
             Layout::Ann(ann, l) => {

@@ -4,11 +4,18 @@ use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
 
 use crate::util::format_float;
 
+// #TODO precisely delineate 'line', 'span'
+// #TODO HList, Join, etc can not have layouts!
+// #TODO extract Line enum, Fragment { Span, Ann }
+// #TODO Layout { Indent(Box<Layout>), Block(Vec<Span>), Ann(HashMap<String, Expr>, Box<Layout>) }, Span { Text(String), Separator, Ann(Hashmap, Box<Span>) }
+// span helper constructors (joined, separated, new)
+// replace separator with Span?
+
 // #TODO could name this layout 'Cell' or Fragment
 #[derive(Clone, Debug)]
 pub enum Layout {
-    /// Indentation block
-    Indent(Box<Layout>),
+    /// Indentation block, supports both indentation and alignment.
+    Indent(Box<Layout>, Option<usize>),
     /// List, to be joined, no separator.
     Join(Vec<Layout>),
     /// Vertical list, separated by EOL
@@ -21,12 +28,25 @@ pub enum Layout {
 }
 
 impl Layout {
+    pub fn indent(layout: Layout) -> Self {
+        Self::Indent(Box::new(layout), None)
+    }
+
+    pub fn align(layout: Layout, indent_size: usize) -> Self {
+        Self::Indent(Box::new(layout), Some(indent_size))
+    }
+
     pub fn span(s: impl Into<String>) -> Self {
         Self::Span(s.into())
     }
 
     pub fn hlist(list: impl Into<Vec<Layout>>) -> Self {
         Self::HList(list.into())
+    }
+
+    pub fn separator() -> Self {
+        Self::Separator
+        // Self::Span("".to_owned())
     }
 }
 
@@ -42,90 +62,92 @@ impl<'a> Arranger<'a> {
         }
     }
 
-    fn arrange_next(&mut self) -> Layout {
-        // #TODO should handle inline comment?
-        // #insight not checking, input to formatter should be valid.
-        let expr = self.exprs.next().unwrap();
-        self.arrange_expr(expr)
-    }
+    fn arrange_next(&mut self) -> Option<Layout> {
+        let Some(expr0) = self.exprs.next() else {
+            return None;
+        };
 
-    fn arrange_rest(&mut self) -> Vec<Layout> {
-        let mut layouts = Vec::new();
+        let layout = self.layout_from_expr(expr0);
 
-        loop {
-            let mut row = Vec::new();
-
-            let Some(expr0) = self.exprs.next() else {
-                break;
-            };
-
-            row.push(self.arrange_expr(expr0));
-
-            let mut has_inline_comment = false;
-
-            if let Some(expr1) = self.exprs.next() {
-                match expr1 {
-                    Ann(Expr::Comment(..), _) => {
-                        if expr1.get_range().unwrap().start.line
-                            == expr0.get_range().unwrap().start.line
-                        {
-                            has_inline_comment = true;
-                            row.push(self.arrange_expr(expr1));
-                        } else {
-                            self.exprs.put_back(expr1);
-                        }
-                    }
-                    _ => {
+        if let Some(expr1) = self.exprs.next() {
+            match expr1 {
+                Ann(Expr::Comment(..), _) => {
+                    if expr1.get_range().unwrap().start.line
+                        == expr0.get_range().unwrap().start.line
+                    {
+                        let comment = self.layout_from_expr(expr1);
+                        return Some(Layout::HList(vec![layout, comment]));
+                    } else {
                         self.exprs.put_back(expr1);
                     }
                 }
-            };
-
-            if has_inline_comment {
-                layouts.push(Layout::HList(row));
-            } else {
-                layouts.push(row[0].clone());
+                _ => {
+                    self.exprs.put_back(expr1);
+                }
             }
+        };
+
+        Some(layout)
+    }
+
+    fn arrange_all(&mut self) -> Vec<Layout> {
+        let mut layouts = Vec::new();
+
+        while let Some(layout) = self.arrange_next() {
+            layouts.push(layout);
         }
 
         layouts
     }
 
-    fn arrange_rest_as_pairs(&mut self) -> Layout {
+    fn arrange_next_pair(&mut self) -> Option<Layout> {
+        let mut tuple = Vec::new();
+
+        let Some(expr0) = self.exprs.next() else {
+            return None;
+        };
+
+        tuple.push(self.layout_from_expr(expr0));
+
+        let Some(expr1) = self.exprs.next() else {
+            return None;
+        };
+
+        tuple.push(self.layout_from_expr(expr1));
+
+        if let Some(expr2) = self.exprs.next() {
+            match expr2 {
+                Ann(Expr::Comment(..), _) => {
+                    if expr2.get_range().unwrap().start.line
+                        == expr0.get_range().unwrap().start.line
+                    {
+                        tuple.push(self.layout_from_expr(expr2));
+                    } else {
+                        self.exprs.put_back(expr2);
+                    }
+                }
+                _ => {
+                    self.exprs.put_back(expr2);
+                }
+            }
+        };
+
+        Some(Layout::HList(tuple))
+    }
+
+    fn arrange_all_pairs(&mut self) -> Layout {
         let mut layouts = Vec::new();
 
         let mut has_inline_comment = false;
 
-        loop {
-            let mut row = Vec::new();
-
-            let Some(expr0) = self.exprs.next() else {
-                break;
-            };
-
-            row.push(self.arrange_expr(expr0));
-
-            row.push(self.arrange_next());
-
-            if let Some(expr2) = self.exprs.next() {
-                match expr2 {
-                    Ann(Expr::Comment(..), _) => {
-                        if expr2.get_range().unwrap().start.line
-                            == expr0.get_range().unwrap().start.line
-                        {
-                            has_inline_comment = true;
-                            row.push(self.arrange_expr(expr2));
-                        } else {
-                            self.exprs.put_back(expr2);
-                        }
-                    }
-                    _ => {
-                        self.exprs.put_back(expr2);
-                    }
+        while let Some(layout) = self.arrange_next_pair() {
+            if let Layout::HList(spans) = &layout {
+                if spans.len() > 2 {
+                    has_inline_comment = true;
                 }
             };
 
-            layouts.push(Layout::HList(row));
+            layouts.push(layout);
         }
 
         // #TODO consider extracting the following outside, for extra flexibility.
@@ -154,8 +176,8 @@ impl<'a> Arranger<'a> {
             Expr::Symbol(name) if name == "do" => {
                 layouts.push(Layout::span("(do"));
                 // Always arrange a `do` block vertically.
-                let block = Layout::VList(self.arrange_rest());
-                layouts.push(Layout::Indent(Box::new(block)));
+                let block = Layout::VList(self.arrange_all());
+                layouts.push(Layout::indent(block));
                 layouts.push(Layout::span(")"));
                 Layout::VList(layouts)
             }
@@ -163,11 +185,11 @@ impl<'a> Arranger<'a> {
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::HList(vec![
                     Layout::span(format!("({name}")),
-                    self.arrange_next(),
+                    self.arrange_next().unwrap(),
                 ]));
-                let block = self.arrange_rest();
+                let block = self.arrange_all();
                 if block.len() > 1 {
-                    layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
+                    layouts.push(Layout::indent(Layout::VList(block)));
                     layouts.push(Layout::span(")"));
                     Layout::VList(layouts)
                 } else {
@@ -181,13 +203,13 @@ impl<'a> Arranger<'a> {
                 // #TODO more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
                 layouts.push(Layout::span("["));
-                let block = self.arrange_rest();
+                let block = self.arrange_all();
                 if block.len() > 0 {
                     match &block[0] {
                         // Heuristic: if the array includes blocks, arrange
                         // vertically.
-                        Layout::VList(_) | Layout::Indent(_) => {
-                            layouts.push(Layout::Indent(Box::new(Layout::VList(block))));
+                        Layout::VList(_) | Layout::Indent(..) => {
+                            layouts.push(Layout::indent(Layout::VList(block)));
                             layouts.push(Layout::span("]"));
                             Layout::VList(layouts)
                         }
@@ -204,7 +226,7 @@ impl<'a> Arranger<'a> {
             }
             Expr::Symbol(name) if name == "Dict" => {
                 layouts.push(Layout::span("{"));
-                let block = self.arrange_rest_as_pairs();
+                let block = self.arrange_all_pairs();
                 match block {
                     Layout::HList(_) => {
                         layouts.push(block);
@@ -213,15 +235,17 @@ impl<'a> Arranger<'a> {
                     },
                     _ /* Layout::VList */ => {
                         // #TODO Indent should auto convert to VList
-                        layouts.push(Layout::Indent(Box::new(block)));
+                        layouts.push(Layout::indent(block));
                         layouts.push(Layout::span('}'));
                         Layout::VList(layouts)
                     }
                 }
             }
             Expr::Symbol(name) if name == "let" => {
+                // #TODO put the first binding on the same line.
+                // #TODO precise alignment.
                 layouts.push(Layout::span("(let"));
-                let block = self.arrange_rest_as_pairs();
+                let block = self.arrange_all_pairs();
                 match block {
                     Layout::HList(_) => {
                         layouts.push(Layout::span(" "));
@@ -231,7 +255,7 @@ impl<'a> Arranger<'a> {
                     },
                     _ /* Layout::VList */ => {
                         // #TODO Indent should auto convert to VList
-                        layouts.push(Layout::Indent(Box::new(block)));
+                        layouts.push(Layout::align(block, 5 /* "(let " */));
                         layouts.push(Layout::span(')'));
                         Layout::VList(layouts)
                     }
@@ -240,10 +264,10 @@ impl<'a> Arranger<'a> {
             _ => {
                 // Function call.
                 layouts.push(Layout::span(format!("({head}")));
-                let args = self.arrange_rest();
+                let args = self.arrange_all();
                 if !args.is_empty() {
                     layouts.push(Layout::span(" "));
-                    layouts.push(Layout::HList(self.arrange_rest()));
+                    layouts.push(Layout::HList(args));
                 }
                 layouts.push(Layout::span(")"));
                 Layout::Join(layouts)
@@ -251,13 +275,12 @@ impl<'a> Arranger<'a> {
         }
     }
 
-    fn arrange_expr(&mut self, expr: &Ann<Expr>) -> Layout {
+    fn layout_from_expr(&mut self, expr: &Ann<Expr>) -> Layout {
         let Ann(expr, ann) = expr;
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Span(s.clone()),
-            Expr::TextSeparator => Layout::Separator, // #TODO different impl!
-            // Expr::Annotation(s) => format!("#{s}"),
+            Expr::TextSeparator => Layout::separator(), // #TODO different impl!
             Expr::String(s) => Layout::Span(format!("\"{s}\"")),
             Expr::Symbol(s) => Layout::Span(s.clone()),
             Expr::Int(n) => Layout::Span(n.to_string()),
@@ -293,6 +316,6 @@ impl<'a> Arranger<'a> {
     }
 
     pub fn arrange(&mut self) -> Layout {
-        Layout::VList(self.arrange_rest())
+        Layout::VList(self.arrange_all())
     }
 }
