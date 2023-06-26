@@ -4,6 +4,8 @@ use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
 
 use crate::util::format_float;
 
+// #TODO resolve ident + correct Layout structure.
+
 // #TODO precisely delineate 'line', 'span'
 // #TODO HList, Join, etc can not have layouts!
 // #TODO extract Line enum, Fragment { Span, Ann }
@@ -90,6 +92,7 @@ impl<'a> Arranger<'a> {
         Some(layout)
     }
 
+    // #TODO return force_vertical
     fn arrange_all(&mut self) -> Vec<Layout> {
         let mut layouts = Vec::new();
 
@@ -150,16 +153,6 @@ impl<'a> Arranger<'a> {
 
             layouts.push(layout);
         }
-
-        // #TODO consider extracting the following outside, for extra flexibility.
-
-        // let should_arrange_vertical = has_inline_comment || layouts.len() > 2;
-
-        // if should_arrange_vertical {
-        //     Layout::VList(layouts)
-        // } else {
-        //     Layout::HList(layouts)
-        // }
 
         (layouts, force_vertical)
     }
@@ -243,10 +236,6 @@ impl<'a> Arranger<'a> {
                 }
             }
             Expr::Symbol(name) if name == "let" => {
-                // #TODO put the first binding on the same line.
-                // #TODO precise alignment.
-                // layouts.push(Layout::span("(let"));
-
                 let (mut pairs, should_force_vertical) = self.arrange_all_pairs();
 
                 if should_force_vertical {
@@ -268,32 +257,6 @@ impl<'a> Arranger<'a> {
                     layouts.push(Layout::span(')'));
                     Layout::Join(layouts)
                 }
-
-                // if force_vertical || pairs.len() > 2 {
-                //     layouts.push(block);
-                //     layouts.push(Layout::span('}'));
-                //     Layout::Join(layouts)
-                // } else {
-                //     layouts.push(Layout::indent(block));
-                //     layouts.push(Layout::span('}'));
-                //     Layout::VList(layouts)
-                // }
-
-                // let block = self.arrange_all_pairs();
-                // match block {
-                //     Layout::HList(_) => {
-                //         layouts.push(Layout::span(" "));
-                //         layouts.push(block);
-                //         layouts.push(Layout::span(')'));
-                //         Layout::Join(layouts)
-                //     },
-                //     _ /* Layout::VList */ => {
-                //         // #TODO Indent should auto convert to VList
-                //         layouts.push(Layout::align(block, 5 /* "(let " */));
-                //         layouts.push(Layout::span(')'));
-                //         Layout::VList(layouts)
-                //     }
-                // }
             }
             _ => {
                 // Function call.

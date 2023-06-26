@@ -3,6 +3,8 @@ use tan_fmt::layout::Arranger;
 
 mod common;
 
+// #TODO convert these to tests?
+
 #[test]
 pub fn arrange_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
