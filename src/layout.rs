@@ -135,15 +135,16 @@ impl<'a> Arranger<'a> {
         Some(Layout::HList(tuple))
     }
 
-    fn arrange_all_pairs(&mut self) -> Layout {
+    fn arrange_all_pairs(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
-        let mut has_inline_comment = false;
+        let mut force_vertical = false;
 
         while let Some(layout) = self.arrange_next_pair() {
             if let Layout::HList(spans) = &layout {
                 if spans.len() > 2 {
-                    has_inline_comment = true;
+                    // If a pair has an inline comments, force vertical layout
+                    force_vertical = true;
                 }
             };
 
@@ -152,13 +153,15 @@ impl<'a> Arranger<'a> {
 
         // #TODO consider extracting the following outside, for extra flexibility.
 
-        let should_arrange_vertical = has_inline_comment || layouts.len() > 2;
+        // let should_arrange_vertical = has_inline_comment || layouts.len() > 2;
 
-        if should_arrange_vertical {
-            Layout::VList(layouts)
-        } else {
-            Layout::HList(layouts)
-        }
+        // if should_arrange_vertical {
+        //     Layout::VList(layouts)
+        // } else {
+        //     Layout::HList(layouts)
+        // }
+
+        (layouts, force_vertical)
     }
 
     fn arrange_list(&mut self) -> Layout {
@@ -226,40 +229,71 @@ impl<'a> Arranger<'a> {
             }
             Expr::Symbol(name) if name == "Dict" => {
                 layouts.push(Layout::span("{"));
-                let block = self.arrange_all_pairs();
-                match block {
-                    Layout::HList(_) => {
-                        layouts.push(block);
-                        layouts.push(Layout::span('}'));
-                        Layout::Join(layouts)
-                    },
-                    _ /* Layout::VList */ => {
-                        // #TODO Indent should auto convert to VList
-                        layouts.push(Layout::indent(block));
-                        layouts.push(Layout::span('}'));
-                        Layout::VList(layouts)
-                    }
+
+                let (pairs, should_force_vertical) = self.arrange_all_pairs();
+
+                if should_force_vertical || pairs.len() > 2 {
+                    layouts.push(Layout::indent(Layout::VList(pairs)));
+                    layouts.push(Layout::span('}'));
+                    Layout::VList(layouts)
+                } else {
+                    layouts.push(Layout::HList(pairs));
+                    layouts.push(Layout::span('}'));
+                    Layout::Join(layouts)
                 }
             }
             Expr::Symbol(name) if name == "let" => {
                 // #TODO put the first binding on the same line.
                 // #TODO precise alignment.
-                layouts.push(Layout::span("(let"));
-                let block = self.arrange_all_pairs();
-                match block {
-                    Layout::HList(_) => {
-                        layouts.push(Layout::span(" "));
-                        layouts.push(block);
-                        layouts.push(Layout::span(')'));
-                        Layout::Join(layouts)
-                    },
-                    _ /* Layout::VList */ => {
-                        // #TODO Indent should auto convert to VList
-                        layouts.push(Layout::align(block, 5 /* "(let " */));
-                        layouts.push(Layout::span(')'));
-                        Layout::VList(layouts)
+                // layouts.push(Layout::span("(let"));
+
+                let (mut pairs, should_force_vertical) = self.arrange_all_pairs();
+
+                if should_force_vertical {
+                    // Special case: one binding with inline comment.
+                    layouts.push(Layout::span("(let"));
+                    layouts.push(Layout::indent(Layout::VList(pairs)));
+                    layouts.push(Layout::span(')'));
+                    Layout::VList(layouts)
+                } else if pairs.len() > 1 {
+                    layouts.push(Layout::HList(vec![Layout::span("(let"), pairs.remove(0)]));
+                    if !pairs.is_empty() {
+                        layouts.push(Layout::align(Layout::VList(pairs), 5 /* "(let " */));
                     }
+                    layouts.push(Layout::span(')'));
+                    Layout::VList(layouts)
+                } else {
+                    layouts.push(Layout::span("(let "));
+                    layouts.push(Layout::hlist(pairs));
+                    layouts.push(Layout::span(')'));
+                    Layout::Join(layouts)
                 }
+
+                // if force_vertical || pairs.len() > 2 {
+                //     layouts.push(block);
+                //     layouts.push(Layout::span('}'));
+                //     Layout::Join(layouts)
+                // } else {
+                //     layouts.push(Layout::indent(block));
+                //     layouts.push(Layout::span('}'));
+                //     Layout::VList(layouts)
+                // }
+
+                // let block = self.arrange_all_pairs();
+                // match block {
+                //     Layout::HList(_) => {
+                //         layouts.push(Layout::span(" "));
+                //         layouts.push(block);
+                //         layouts.push(Layout::span(')'));
+                //         Layout::Join(layouts)
+                //     },
+                //     _ /* Layout::VList */ => {
+                //         // #TODO Indent should auto convert to VList
+                //         layouts.push(Layout::align(block, 5 /* "(let " */));
+                //         layouts.push(Layout::span(')'));
+                //         Layout::VList(layouts)
+                //     }
+                // }
             }
             _ => {
                 // Function call.

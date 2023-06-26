@@ -1,6 +1,6 @@
 (let a 1)
 (let
-     b 2 ; This is an inline comment
+    b 2 ; This is an inline comment
 )
 
 (let c 3) ; Another comment
