@@ -5,6 +5,8 @@ use crate::common::read_file;
 
 mod common;
 
+// #TODO a lot of duplication here, refactor.
+
 #[test]
 pub fn format_pretty_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
@@ -53,6 +55,19 @@ pub fn format_pretty_handles_inline_comments() {
     let expected_output = read_file("inline-comments.pretty.tan");
 
     // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}
+
+#[test]
+pub fn format_pretty_handles_nested_function() {
+    let exprs = parse_file("nested-function.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("nested-function.pretty.tan");
+
+    eprintln!("{output}");
 
     assert_eq!(output, expected_output);
 }

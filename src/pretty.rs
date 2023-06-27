@@ -113,7 +113,7 @@ impl<'a> Formatter<'a> {
             }
             Layout::VList(v) => v
                 .iter()
-                .map(|l| self.format_layout(l, true))
+                .map(|l| self.format_layout(l, should_apply_indent))
                 .collect::<Vec<String>>()
                 .join("\n"),
             Layout::Indent(l, indent_size) => {
@@ -137,8 +137,8 @@ impl<'a> Formatter<'a> {
     pub fn format(mut self) -> String {
         let layout = self.arranger.arrange();
         // eprintln!("{:?}", &layout);
-        // dbg!(&layout);
-        let output = self.format_layout(&layout, false);
+        dbg!(&layout);
+        let output = self.format_layout(&layout, true);
         let output = ensure_ends_with_empty_line(&output);
         output
     }
