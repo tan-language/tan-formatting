@@ -1,0 +1,12 @@
+(let a 1)
+(let
+    b 2 ; This is an inline comment
+)
+
+(let c 3) ; Another comment
+
+(do
+    (let c 3) ; Another comment
+)
+
+(let d 5)

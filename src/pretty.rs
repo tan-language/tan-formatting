@@ -3,7 +3,17 @@ use std::collections::{BTreeMap, HashMap};
 use tan::ann::Ann;
 use tan::expr::Expr;
 
-use crate::util::{ensure_ends_with_empty_line, format_float};
+use crate::{
+    layout::{Arranger, Layout},
+    util::{ensure_ends_with_empty_line, trim_separators},
+};
+
+// #insight The formatter cannot err.
+
+// #TODO align inline/side comments
+// #TODO align vertical pairs (e.g. let)
+
+// #TODO preprocess to handle inline comments?
 
 // #TODO add pragmas to define sections with different formatting options or even disabled formatting.
 // #TODO try to use annotations to define the above-mentioned sections.
@@ -21,8 +31,7 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 const DEFAULT_LINE_SIZE: usize = 80;
 
 pub struct Formatter<'a> {
-    // #TODO no need to keep this!
-    exprs: &'a [Ann<Expr>],
+    arranger: Arranger<'a>,
     indent: usize,
     indent_size: usize,
     #[allow(dead_code)]
@@ -37,7 +46,7 @@ pub struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
         Self {
-            exprs,
+            arranger: Arranger::new(exprs),
             indent: 0,
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
@@ -45,65 +54,16 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    pub fn format_horizontal(&mut self, exprs: &[Ann<Expr>]) -> String {
-        let mut output: Vec<String> = Vec::new();
-
-        for expr in exprs {
-            output.push(self.format_expr(expr));
-        }
-
-        output.join(" ")
+    fn apply_indent(&self, s: String, indent: usize) -> String {
+        format!("{ }{s}", " ".repeat(indent))
     }
 
-    pub fn format_vertical(&mut self, exprs: &[Ann<Expr>]) -> String {
-        let mut output: Vec<String> = Vec::new();
-
-        for expr in exprs {
-            match expr {
-                Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
-                _ => {
-                    let s = self.format_expr(expr);
-                    output.push(format!("{}{s}", " ".repeat(self.indent)));
-                }
-            }
-        }
-
-        output.join("\n")
-    }
-
-    pub fn format_vertical_pairs(&mut self, exprs: &[Ann<Expr>]) -> String {
-        let mut output: Vec<String> = Vec::new();
-
-        let mut i = 0;
-
-        while i < exprs.len() {
-            let expr = &exprs[i];
-            i += 1;
-            match expr {
-                Ann(Expr::TextSeparator, ..) => output.push("".to_owned()),
-                _ => {
-                    let key = expr;
-                    let value = &exprs[i];
-                    i += 1;
-                    let value = self.format_expr(value);
-                    output.push(format!("{}{key} {value}", " ".repeat(self.indent)));
-                }
-            }
-        }
-
-        output.join("\n")
-    }
-
-    fn format_annotations(&self, ann: &Option<HashMap<String, Expr>>) -> String {
-        let Some(ann) = ann else {
-            return "".to_string()
-        };
-
-        if ann.len() < 2 {
+    fn format_annotations(&self, ann: &HashMap<String, Expr>) -> String {
+        if ann.is_empty() {
             return "".to_string();
         }
 
-        // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not.
+        // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not?
 
         // Sort the annotations map, for stable formatting.
         let ann = BTreeMap::from_iter(ann);
@@ -128,117 +88,62 @@ impl<'a> Formatter<'a> {
 
     // #TODO automatically put `_` separators to numbers.
 
-    pub fn format_expr(&mut self, expr: &Ann<Expr>) -> String {
-        let Ann(expr, ann) = expr;
-
-        let output = match expr {
-            Expr::Comment(s) => s.clone(),
-            Expr::TextSeparator => "".to_owned(),
-            // #TODO maybe it's better to format annotations from Expr?
-            // Expr::Annotation(s) => format!("#{s}"),
-            Expr::String(s) => format!("\"{s}\""),
-            Expr::Symbol(s) => s.clone(),
-            Expr::Int(n) => n.to_string(),
-            Expr::One => "()".to_string(),
-            Expr::Bool(b) => b.to_string(),
-            Expr::Float(n) => format_float(*n),
-            Expr::KeySymbol(s) => format!(":{s}"),
-            Expr::Char(c) => format!(r#"(Char "{c}")"#),
-            Expr::List(terms) => {
-                if terms.is_empty() {
-                    return "()".to_owned();
-                }
-
-                let (head, tail) = terms.split_at(1);
-
-                let head = &head[0];
-                // let tail: Vec<Expr> = tail.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone!
-
-                let head = self.format_expr(head);
-
-                if head == "do" {
-                    // The tail terms are rendered vertically.
-                    let mut s = "(do\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-                    s
-                } else if head == "Func" || head == "if" {
-                    // The first tail term is rendered in same line, the
-                    // rest are rendered vertically.
-                    let mut s = format!("({head} ");
-
-                    let (tail_first, tail_rest) = tail.split_at(1);
-
-                    let tail_first = &tail_first[0];
-                    s.push_str(&format!("{}\n", self.format_expr(tail_first)));
-
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail_rest));
-                    self.indent -= self.indent_size;
-
-                    s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-
-                    s
-                } else if head == "Array" {
-                    let mut s = "[\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{}]", " ".repeat(self.indent)));
-                    s
-                } else if head == "Dict" {
-                    let mut s = "{\n".to_string();
-                    self.indent += self.indent_size;
-                    s.push_str(&self.format_vertical_pairs(tail));
-                    self.indent -= self.indent_size;
-                    s.push_str(&format!("\n{}}}", " ".repeat(self.indent)));
-                    s
-                } else if head == "let" {
-                    let mut s = "(let ".to_string();
-
-                    if tail.len() > 4 {
-                        self.indent += 5; // indent = "(let ".len()
-                        s.push_str(self.format_vertical_pairs(tail).trim_start());
-                        self.indent -= 5;
-                        s.push_str(&format!("\n{})", " ".repeat(self.indent)));
-                    } else {
-                        s.push_str(&self.format_horizontal(tail));
-                        s.push(')');
-                    }
-                    s
-                } else {
-                    // let terms: Vec<Expr> = terms.iter().map(|expr| expr.0.clone()).collect(); // #TODO argh, remove the clone! -> use Ann<Expr> everywhere!
-                    let mut s = "(".to_string();
-                    s.push_str(&self.format_horizontal(terms));
-                    s.push(')');
-                    s
-                }
+    fn format_layout(&mut self, layout: &Layout) -> String {
+        match layout {
+            Layout::Item(s) => s.clone(),
+            Layout::Row(v, separator) => v
+                .iter()
+                .map(|l| self.format_layout(l))
+                .collect::<Vec<String>>()
+                .join(separator),
+            Layout::Stack(v) => v
+                .iter()
+                .map(|l| self.format_layout(l))
+                .collect::<Vec<String>>()
+                .join("\n"),
+            Layout::Indent(v, indent_size) => {
+                let indent_size = indent_size.unwrap_or(self.indent_size);
+                self.indent += indent_size;
+                let string = v
+                    .iter()
+                    .map(|l| {
+                        let string = self.format_layout(l);
+                        self.apply_indent(string, self.indent)
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                self.indent -= indent_size;
+                string
             }
-            _ => expr.to_string(),
-        };
-
-        format!("{}{output}", self.format_annotations(ann))
+            Layout::Apply(l) => {
+                let string = self.format_layout(l);
+                self.apply_indent(string, self.indent)
+            }
+            // Layout::Indent(l, indent_size) => {
+            //     let indent_size = indent_size.unwrap_or(self.indent_size);
+            //     self.indent += indent_size;
+            //     let string = self.format_layout(l, self.indent);
+            //     self.indent -= indent_size;
+            //     string
+            // }
+            Layout::Ann(ann, l) => {
+                let ann = self.format_annotations(ann);
+                let string = self.format_layout(l);
+                format!("{ann}{string}")
+            }
+            Layout::Separator => "".to_owned(),
+        }
     }
-
-    // #Insight
-    // The formatter cannot err.
 
     /// Formats expressions into an aestheticall pleasing form.
     /// This is the standard textual representation of expressions.
-    pub fn format(&mut self) -> String {
-        let mut output: Vec<String> = Vec::new();
-
-        // #TODO support look-ahead?
-        for expr in self.exprs {
-            output.push(self.format_expr(expr));
-        }
-
-        let output = output.join("\n");
-
+    pub fn format(mut self) -> String {
+        let layout = self.arranger.arrange();
+        // eprintln!("{:?}", &layout);
+        // dbg!(&layout);
+        let output = self.format_layout(&layout);
+        let output = trim_separators(&output);
         let output = ensure_ends_with_empty_line(&output);
-
         output
     }
 }
