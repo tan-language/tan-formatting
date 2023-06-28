@@ -67,7 +67,7 @@ pub fn format_pretty_handles_nested_function() {
     let output = formatter.format();
     let expected_output = read_file("nested-function.pretty.tan");
 
-    eprintln!("{output}");
+    // eprintln!("{output}");
 
     assert_eq!(output, expected_output);
 }

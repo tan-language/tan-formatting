@@ -17,38 +17,44 @@ use crate::util::format_float;
 #[derive(Clone, Debug)]
 pub enum Layout {
     /// Indentation block, supports both indentation and alignment.
-    Indent(Box<Layout>, Option<usize>),
-    /// List, to be joined, no separator.
-    Join(Vec<Layout>),
-    /// Vertical list, separated by EOL
-    VList(Vec<Layout>), // #TODO Could name this Column
-    /// Horizontal list, separated by SPACE
-    HList(Vec<Layout>), // #TODO Could name this Row
-    Span(String),
+    Indent(Vec<Layout>, Option<usize>), // #TODO no need for Indent, add option to stack
+    /// Vertical arrangement
+    Stack(Vec<Layout>),
+    /// Horizontal arrangement
+    Row(Vec<Layout>, String),
+    Apply(Box<Layout>),
+    Item(String),
     Ann(HashMap<String, Expr>, Box<Layout>),
     Separator,
 }
 
 impl Layout {
-    pub fn indent(layout: Layout) -> Self {
-        Self::Indent(Box::new(layout), None)
+    pub fn indent(list: Vec<Layout>) -> Self {
+        Self::Indent(list, None)
     }
 
-    pub fn align(layout: Layout, indent_size: usize) -> Self {
-        Self::Indent(Box::new(layout), Some(indent_size))
+    pub fn align(list: Vec<Layout>, indent_size: usize) -> Self {
+        Self::Indent(list, Some(indent_size))
     }
 
-    pub fn span(s: impl Into<String>) -> Self {
-        Self::Span(s.into())
+    pub fn row(list: impl Into<Vec<Layout>>) -> Self {
+        Self::Row(list.into(), " ".to_string())
     }
 
-    pub fn hlist(list: impl Into<Vec<Layout>>) -> Self {
-        Self::HList(list.into())
+    pub fn join(list: impl Into<Vec<Layout>>) -> Self {
+        Self::Row(list.into(), "".to_string())
     }
 
-    pub fn separator() -> Self {
-        Self::Separator
-        // Self::Span("".to_owned())
+    pub fn apply(l: Layout) -> Self {
+        Self::Apply(Box::new(l))
+    }
+
+    pub fn item(s: impl Into<String>) -> Self {
+        Self::Item(s.into())
+    }
+
+    pub fn space() -> Self {
+        Self::Item(" ".into())
     }
 }
 
@@ -78,7 +84,7 @@ impl<'a> Arranger<'a> {
                         == expr0.get_range().unwrap().start.line
                     {
                         let comment = self.layout_from_expr(expr1);
-                        return Some(Layout::HList(vec![layout, comment]));
+                        return Some(Layout::row(vec![layout, comment]));
                     } else {
                         self.exprs.put_back(expr1);
                     }
@@ -135,7 +141,7 @@ impl<'a> Arranger<'a> {
             }
         };
 
-        Some(Layout::HList(tuple))
+        Some(Layout::row(tuple))
     }
 
     fn arrange_all_pairs(&mut self) -> (Vec<Layout>, bool) {
@@ -144,8 +150,8 @@ impl<'a> Arranger<'a> {
         let mut force_vertical = false;
 
         while let Some(layout) = self.arrange_next_pair() {
-            if let Layout::HList(spans) = &layout {
-                if spans.len() > 2 {
+            if let Layout::Row(items, ..) = &layout {
+                if items.len() > 2 {
                     // If a pair has an inline comments, force vertical layout
                     force_vertical = true;
                 }
@@ -158,7 +164,7 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_list(&mut self) -> Layout {
-        // #indsight not need to check here.
+        // #insight not need to check here.
         let expr = self.exprs.next().unwrap();
 
         let mut layouts = Vec::new();
@@ -170,104 +176,105 @@ impl<'a> Arranger<'a> {
 
         match head {
             Expr::Symbol(name) if name == "do" => {
-                layouts.push(Layout::span("(do"));
                 // Always arrange a `do` block vertically.
-                let block = Layout::VList(self.arrange_all());
-                layouts.push(Layout::indent(block));
-                layouts.push(Layout::span(")"));
-                Layout::VList(layouts)
+                layouts.push(Layout::item("(do"));
+                layouts.push(Layout::indent(self.arrange_all()));
+                layouts.push(Layout::apply(Layout::item(")")));
+                Layout::Stack(layouts)
             }
             Expr::Symbol(name) if name == "Func" || name == "if" => {
                 // The first expr is rendered inline, the rest are rendered vertically.
-                layouts.push(Layout::HList(vec![
-                    Layout::span(format!("({name}")),
+                layouts.push(Layout::row(vec![
+                    Layout::item(format!("({name}")),
                     self.arrange_next().unwrap(),
                 ]));
                 let block = self.arrange_all();
                 if block.len() > 1 {
-                    layouts.push(Layout::indent(Layout::VList(block)));
-                    layouts.push(Layout::span(")"));
-                    Layout::VList(layouts)
+                    layouts.push(Layout::indent(block));
+                    layouts.push(Layout::apply(Layout::item(")")));
+                    Layout::Stack(layouts)
                 } else {
-                    layouts.push(Layout::span(" "));
+                    layouts.push(Layout::item(" "));
                     layouts.push(block[0].clone());
-                    layouts.push(Layout::span(")"));
-                    Layout::Join(layouts)
+                    layouts.push(Layout::item(")"));
+                    Layout::join(layouts)
                 }
             }
             Expr::Symbol(name) if name == "Array" => {
                 // #TODO more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
-                layouts.push(Layout::span("["));
-                let block = self.arrange_all();
-                if block.len() > 0 {
-                    match &block[0] {
-                        // Heuristic: if the array includes blocks, arrange
+                layouts.push(Layout::item("["));
+                let items = self.arrange_all();
+                if items.len() > 0 {
+                    match &items[0] {
+                        // Heuristic: if the array includes stacks, arrange
                         // vertically.
-                        Layout::VList(_) | Layout::Indent(..) => {
-                            layouts.push(Layout::indent(Layout::VList(block)));
-                            layouts.push(Layout::span("]"));
-                            Layout::VList(layouts)
+                        Layout::Stack(..) | Layout::Indent(..) => {
+                            layouts.push(Layout::indent(items));
+                            layouts.push(Layout::apply(Layout::item("]")));
+                            Layout::Stack(layouts)
                         }
                         _ => {
-                            layouts.push(Layout::HList(block));
-                            layouts.push(Layout::span("]"));
-                            Layout::Join(layouts)
+                            layouts.push(Layout::row(items));
+                            layouts.push(Layout::item("]"));
+                            Layout::join(layouts)
                         }
                     }
                 } else {
-                    layouts.push(Layout::span("]"));
-                    Layout::Join(layouts)
+                    layouts.push(Layout::item("]"));
+                    Layout::join(layouts)
                 }
             }
             Expr::Symbol(name) if name == "Dict" => {
-                layouts.push(Layout::span("{"));
+                let (bindings, should_force_vertical) = self.arrange_all_pairs();
 
-                let (pairs, should_force_vertical) = self.arrange_all_pairs();
-
-                if should_force_vertical || pairs.len() > 2 {
-                    layouts.push(Layout::indent(Layout::VList(pairs)));
-                    layouts.push(Layout::span('}'));
-                    Layout::VList(layouts)
+                if should_force_vertical || bindings.len() > 2 {
+                    layouts.push(Layout::item("{"));
+                    layouts.push(Layout::indent(bindings));
+                    layouts.push(Layout::apply(Layout::item("}")));
+                    Layout::Stack(layouts)
                 } else {
-                    layouts.push(Layout::HList(pairs));
-                    layouts.push(Layout::span('}'));
-                    Layout::Join(layouts)
+                    layouts.push(Layout::item("{"));
+                    layouts.push(Layout::row(bindings));
+                    layouts.push(Layout::item('}'));
+                    Layout::join(layouts)
                 }
             }
             Expr::Symbol(name) if name == "let" => {
-                let (mut pairs, should_force_vertical) = self.arrange_all_pairs();
+                let (mut bindings, should_force_vertical) = self.arrange_all_pairs();
 
                 if should_force_vertical {
-                    // Special case: one binding with inline comment.
-                    layouts.push(Layout::span("(let"));
-                    layouts.push(Layout::indent(Layout::VList(pairs)));
-                    layouts.push(Layout::span(')'));
-                    Layout::VList(layouts)
-                } else if pairs.len() > 1 {
-                    layouts.push(Layout::HList(vec![Layout::span("(let"), pairs.remove(0)]));
-                    if !pairs.is_empty() {
-                        layouts.push(Layout::align(Layout::VList(pairs), 5 /* "(let " */));
+                    // Special case: one binding with inline comment, arrange vertically.
+                    layouts.push(Layout::item("(let"));
+                    layouts.push(Layout::indent(bindings));
+                    layouts.push(Layout::apply(Layout::item(')')));
+                    Layout::Stack(layouts)
+                } else if bindings.len() > 1 {
+                    // More than one binding, arrange vertically.
+                    layouts.push(Layout::row(vec![Layout::item("(let"), bindings.remove(0)]));
+                    if !bindings.is_empty() {
+                        layouts.push(Layout::align(bindings, 5 /* "(let " */));
                     }
-                    layouts.push(Layout::span(')'));
-                    Layout::VList(layouts)
+                    layouts.push(Layout::apply(Layout::item(')')));
+                    Layout::Stack(layouts)
                 } else {
-                    layouts.push(Layout::span("(let "));
-                    layouts.push(Layout::hlist(pairs));
-                    layouts.push(Layout::span(')'));
-                    Layout::Join(layouts)
+                    // One binding, arrange horizontally.
+                    layouts.push(Layout::item("(let "));
+                    layouts.push(Layout::row(bindings));
+                    layouts.push(Layout::item(')'));
+                    Layout::join(layouts)
                 }
             }
             _ => {
                 // Function call.
-                layouts.push(Layout::span(format!("({head}")));
+                layouts.push(Layout::item(format!("({head}")));
                 let args = self.arrange_all();
                 if !args.is_empty() {
-                    layouts.push(Layout::span(" "));
-                    layouts.push(Layout::HList(args));
+                    layouts.push(Layout::item(" "));
+                    layouts.push(Layout::row(args));
                 }
-                layouts.push(Layout::span(")"));
-                Layout::Join(layouts)
+                layouts.push(Layout::item(")"));
+                Layout::join(layouts)
             }
         }
     }
@@ -276,19 +283,19 @@ impl<'a> Arranger<'a> {
         let Ann(expr, ann) = expr;
 
         let layout = match expr {
-            Expr::Comment(s, _) => Layout::Span(s.clone()),
-            Expr::TextSeparator => Layout::separator(), // #TODO different impl!
-            Expr::String(s) => Layout::Span(format!("\"{s}\"")),
-            Expr::Symbol(s) => Layout::Span(s.clone()),
-            Expr::Int(n) => Layout::Span(n.to_string()),
-            Expr::One => Layout::Span("()".to_string()),
-            Expr::Bool(b) => Layout::Span(b.to_string()),
-            Expr::Float(n) => Layout::Span(format_float(*n)),
-            Expr::KeySymbol(s) => Layout::Span(format!(":{s}")),
-            Expr::Char(c) => Layout::Span(format!(r#"(Char "{c}")"#)),
+            Expr::Comment(s, _) => Layout::Item(s.clone()),
+            Expr::TextSeparator => Layout::Separator, // #TODO different impl!
+            Expr::String(s) => Layout::Item(format!("\"{s}\"")),
+            Expr::Symbol(s) => Layout::Item(s.clone()),
+            Expr::Int(n) => Layout::Item(n.to_string()),
+            Expr::One => Layout::Item("()".to_string()),
+            Expr::Bool(b) => Layout::Item(b.to_string()),
+            Expr::Float(n) => Layout::Item(format_float(*n)),
+            Expr::KeySymbol(s) => Layout::Item(format!(":{s}")),
+            Expr::Char(c) => Layout::Item(format!(r#"(Char "{c}")"#)),
             Expr::List(exprs) => {
                 if exprs.is_empty() {
-                    return Layout::Span("()".to_owned());
+                    return Layout::Item("()".to_owned());
                 }
 
                 // #insight Recursive data structure, we recurse.
@@ -296,7 +303,7 @@ impl<'a> Arranger<'a> {
                 let mut list_arranger = Arranger::new(exprs);
                 list_arranger.arrange_list()
             }
-            _ => Layout::Span(expr.to_string()),
+            _ => Layout::Item(expr.to_string()),
         };
 
         if let Some(ann) = ann {
@@ -313,6 +320,6 @@ impl<'a> Arranger<'a> {
     }
 
     pub fn arrange(&mut self) -> Layout {
-        Layout::VList(self.arrange_all())
+        Layout::Stack(self.arrange_all())
     }
 }

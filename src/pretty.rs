@@ -5,7 +5,7 @@ use tan::expr::Expr;
 
 use crate::{
     layout::{Arranger, Layout},
-    util::ensure_ends_with_empty_line,
+    util::{ensure_ends_with_empty_line, trim_separators},
 };
 
 // #insight The formatter cannot err.
@@ -54,12 +54,8 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn apply_indent(&self, s: String, should_apply_indent: bool) -> String {
-        if should_apply_indent {
-            format!("{ }{s}", " ".repeat(self.indent))
-        } else {
-            s
-        }
+    fn apply_indent(&self, s: String, indent: usize) -> String {
+        format!("{ }{s}", " ".repeat(indent))
     }
 
     fn format_annotations(&self, ann: &HashMap<String, Expr>) -> String {
@@ -92,41 +88,48 @@ impl<'a> Formatter<'a> {
 
     // #TODO automatically put `_` separators to numbers.
 
-    fn format_layout(&mut self, layout: &Layout, should_apply_indent: bool) -> String {
+    fn format_layout(&mut self, layout: &Layout) -> String {
         match layout {
-            Layout::Span(s) => self.apply_indent(s.clone(), should_apply_indent),
-            Layout::Join(v) => {
-                let string = v
-                    .iter()
-                    .map(|l| self.format_layout(l, false))
-                    .collect::<Vec<String>>()
-                    .join("");
-                self.apply_indent(string, should_apply_indent)
-            }
-            Layout::HList(v) => {
-                let string = v
-                    .iter()
-                    .map(|l| self.format_layout(l, false))
-                    .collect::<Vec<String>>()
-                    .join(" ");
-                self.apply_indent(string, should_apply_indent)
-            }
-            Layout::VList(v) => v
+            Layout::Item(s) => s.clone(),
+            Layout::Row(v, separator) => v
                 .iter()
-                .map(|l| self.format_layout(l, should_apply_indent))
+                .map(|l| self.format_layout(l))
+                .collect::<Vec<String>>()
+                .join(separator),
+            Layout::Stack(v) => v
+                .iter()
+                .map(|l| self.format_layout(l))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            Layout::Indent(l, indent_size) => {
+            Layout::Indent(v, indent_size) => {
                 let indent_size = indent_size.unwrap_or(self.indent_size);
                 self.indent += indent_size;
-                let string = self.format_layout(l, true);
+                let string = v
+                    .iter()
+                    .map(|l| {
+                        let string = self.format_layout(l);
+                        self.apply_indent(string, self.indent)
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
                 self.indent -= indent_size;
                 string
             }
+            Layout::Apply(l) => {
+                let string = self.format_layout(l);
+                self.apply_indent(string, self.indent)
+            }
+            // Layout::Indent(l, indent_size) => {
+            //     let indent_size = indent_size.unwrap_or(self.indent_size);
+            //     self.indent += indent_size;
+            //     let string = self.format_layout(l, self.indent);
+            //     self.indent -= indent_size;
+            //     string
+            // }
             Layout::Ann(ann, l) => {
                 let ann = self.format_annotations(ann);
-                let string = self.format_layout(l, false);
-                self.apply_indent(format!("{ann}{string}"), should_apply_indent)
+                let string = self.format_layout(l);
+                format!("{ann}{string}")
             }
             Layout::Separator => "".to_owned(),
         }
@@ -137,8 +140,9 @@ impl<'a> Formatter<'a> {
     pub fn format(mut self) -> String {
         let layout = self.arranger.arrange();
         // eprintln!("{:?}", &layout);
-        dbg!(&layout);
-        let output = self.format_layout(&layout, true);
+        // dbg!(&layout);
+        let output = self.format_layout(&layout);
+        let output = trim_separators(&output);
         let output = ensure_ends_with_empty_line(&output);
         output
     }
