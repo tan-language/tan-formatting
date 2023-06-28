@@ -1,0 +1,4 @@
+(group
+        (circle x y 9) ; first
+(circle x z 10)    ; second
+)

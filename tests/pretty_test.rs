@@ -71,3 +71,16 @@ pub fn format_pretty_handles_nested_function() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_handles_nested_call() {
+    let exprs = parse_file("nested-call.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("nested-call.pretty.tan");
+
+    // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}

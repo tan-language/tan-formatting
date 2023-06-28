@@ -99,14 +99,22 @@ impl<'a> Arranger<'a> {
     }
 
     // #TODO return force_vertical
-    fn arrange_all(&mut self) -> Vec<Layout> {
+    fn arrange_all(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
+        let mut force_vertical = false;
+
         while let Some(layout) = self.arrange_next() {
+            if let Layout::Row(v, ..) = &layout {
+                if let Some(Layout::Item(t)) = &v.last() {
+                    force_vertical = t.starts_with(";"); // is comment?
+                }
+            };
+
             layouts.push(layout);
         }
 
-        layouts
+        (layouts, force_vertical)
     }
 
     fn arrange_next_pair(&mut self) -> Option<Layout> {
@@ -177,8 +185,9 @@ impl<'a> Arranger<'a> {
         match head {
             Expr::Symbol(name) if name == "do" => {
                 // Always arrange a `do` block vertically.
+                let (exprs, _) = self.arrange_all();
                 layouts.push(Layout::item("(do"));
-                layouts.push(Layout::indent(self.arrange_all()));
+                layouts.push(Layout::indent(exprs));
                 layouts.push(Layout::apply(Layout::item(")")));
                 Layout::Stack(layouts)
             }
@@ -188,8 +197,8 @@ impl<'a> Arranger<'a> {
                     Layout::item(format!("({name}")),
                     self.arrange_next().unwrap(),
                 ]));
-                let block = self.arrange_all();
-                if block.len() > 1 {
+                let (block, should_force_vertical) = self.arrange_all();
+                if should_force_vertical || block.len() > 1 {
                     layouts.push(Layout::indent(block));
                     layouts.push(Layout::apply(Layout::item(")")));
                     Layout::Stack(layouts)
@@ -204,20 +213,26 @@ impl<'a> Arranger<'a> {
                 // #TODO more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
-                let items = self.arrange_all();
+                let (items, should_force_vertical) = self.arrange_all();
                 if items.len() > 0 {
-                    match &items[0] {
-                        // Heuristic: if the array includes stacks, arrange
-                        // vertically.
-                        Layout::Stack(..) | Layout::Indent(..) => {
-                            layouts.push(Layout::indent(items));
-                            layouts.push(Layout::apply(Layout::item("]")));
-                            Layout::Stack(layouts)
-                        }
-                        _ => {
-                            layouts.push(Layout::row(items));
-                            layouts.push(Layout::item("]"));
-                            Layout::join(layouts)
+                    if should_force_vertical {
+                        layouts.push(Layout::indent(items));
+                        layouts.push(Layout::apply(Layout::item("]")));
+                        Layout::Stack(layouts)
+                    } else {
+                        match &items[0] {
+                            // Heuristic: if the array includes stacks, arrange
+                            // vertically.
+                            Layout::Stack(..) | Layout::Indent(..) => {
+                                layouts.push(Layout::indent(items));
+                                layouts.push(Layout::apply(Layout::item("]")));
+                                Layout::Stack(layouts)
+                            }
+                            _ => {
+                                layouts.push(Layout::row(items));
+                                layouts.push(Layout::item("]"));
+                                Layout::join(layouts)
+                            }
                         }
                     }
                 } else {
@@ -268,13 +283,22 @@ impl<'a> Arranger<'a> {
             _ => {
                 // Function call.
                 layouts.push(Layout::item(format!("({head}")));
-                let args = self.arrange_all();
+                let (args, should_force_vertical) = self.arrange_all();
                 if !args.is_empty() {
-                    layouts.push(Layout::item(" "));
-                    layouts.push(Layout::row(args));
+                    if should_force_vertical {
+                        layouts.push(Layout::indent(args));
+                        layouts.push(Layout::apply(Layout::item(")")));
+                        Layout::Stack(layouts)
+                    } else {
+                        layouts.push(Layout::item(" "));
+                        layouts.push(Layout::row(args));
+                        layouts.push(Layout::item(")"));
+                        Layout::join(layouts)
+                    }
+                } else {
+                    layouts.push(Layout::item(")"));
+                    Layout::join(layouts)
                 }
-                layouts.push(Layout::item(")"));
-                Layout::join(layouts)
             }
         }
     }
@@ -320,6 +344,7 @@ impl<'a> Arranger<'a> {
     }
 
     pub fn arrange(&mut self) -> Layout {
-        Layout::Stack(self.arrange_all())
+        let (rows, _) = self.arrange_all();
+        Layout::Stack(rows)
     }
 }
