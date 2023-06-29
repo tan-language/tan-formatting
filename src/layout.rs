@@ -4,15 +4,7 @@ use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
 
 use crate::util::format_float;
 
-// #TODO resolve ident + correct Layout structure.
-
-// #TODO precisely delineate 'line', 'span'
-// #TODO HList, Join, etc can not have layouts!
-// #TODO extract Line enum, Fragment { Span, Ann }
-// #TODO Layout { Indent(Box<Layout>), Block(Vec<Span>), Ann(HashMap<String, Expr>, Box<Layout>) }, Span { Text(String), Separator, Ann(Hashmap, Box<Span>) }
-// span helper constructors (joined, separated, new)
-// replace separator with Span?
-
+// #TODO refine this enum, potentially split into 2 enums?
 // #TODO could name this layout 'Cell' or Fragment
 #[derive(Clone, Debug)]
 pub enum Layout {
