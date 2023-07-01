@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
 
-use tan::ann::Ann;
 use tan::expr::Expr;
 
 use crate::{
@@ -44,7 +43,7 @@ pub struct Formatter<'a> {
 // #TODO introduce 'builder' api?
 
 impl<'a> Formatter<'a> {
-    pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
+    pub fn new(exprs: &'a [Expr]) -> Self {
         Self {
             arranger: Arranger::new(exprs),
             indent: 0,

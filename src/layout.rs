@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use tan::{ann::Ann, expr::Expr, util::put_back_iterator::PutBackIterator};
-
-use crate::util::format_float;
+use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackIterator};
 
 // #TODO refine this enum, potentially split into 2 enums?
 // #TODO could name this layout 'Cell' or Fragment
@@ -52,11 +50,11 @@ impl Layout {
 
 // #TODO find a better name.
 pub struct Arranger<'a> {
-    exprs: PutBackIterator<'a, Ann<Expr>>,
+    exprs: PutBackIterator<'a, Expr>,
 }
 
 impl<'a> Arranger<'a> {
-    pub fn new(exprs: &'a [Ann<Expr>]) -> Self {
+    pub fn new(exprs: &'a [Expr]) -> Self {
         Self {
             exprs: PutBackIterator::new(exprs),
         }
@@ -70,11 +68,9 @@ impl<'a> Arranger<'a> {
         let layout = self.layout_from_expr(expr0);
 
         if let Some(expr1) = self.exprs.next() {
-            match expr1 {
-                Ann(Expr::Comment(..), _) => {
-                    if expr1.get_range().unwrap().start.line
-                        == expr0.get_range().unwrap().start.line
-                    {
+            match expr1.unpack() {
+                Expr::Comment(..) => {
+                    if expr1.range().unwrap().start.line == expr0.range().unwrap().start.line {
                         let comment = self.layout_from_expr(expr1);
                         return Some(Layout::row(vec![layout, comment]));
                     } else {
@@ -125,11 +121,9 @@ impl<'a> Arranger<'a> {
         tuple.push(self.layout_from_expr(expr1));
 
         if let Some(expr2) = self.exprs.next() {
-            match expr2 {
-                Ann(Expr::Comment(..), _) => {
-                    if expr2.get_range().unwrap().start.line
-                        == expr0.get_range().unwrap().start.line
-                    {
+            match expr2.unpack() {
+                Expr::Comment(..) => {
+                    if expr2.range().unwrap().start.line == expr0.range().unwrap().start.line {
                         tuple.push(self.layout_from_expr(expr2));
                     } else {
                         self.exprs.put_back(expr2);
@@ -169,7 +163,7 @@ impl<'a> Arranger<'a> {
 
         let mut layouts = Vec::new();
 
-        let head = &expr.0;
+        let head = &expr.unpack();
 
         // #TODO should decide between (h)list/vlist.
         // #TODO special formatting for `if`.
@@ -295,8 +289,8 @@ impl<'a> Arranger<'a> {
         }
     }
 
-    fn layout_from_expr(&mut self, expr: &Ann<Expr>) -> Layout {
-        let Ann(expr, ann) = expr;
+    fn layout_from_expr(&mut self, expr: &Expr) -> Layout {
+        let (expr, ann) = expr.extract();
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Item(s.clone()),
