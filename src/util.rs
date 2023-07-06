@@ -22,3 +22,28 @@ pub fn trim_separators(input: &str) -> String {
     let regex = SEPARATOR_REGEX.get_or_init(|| Regex::new(r"[ \t]+\n").unwrap());
     regex.replace_all(&input, "\n").to_string()
 }
+
+pub fn escape_string(input: &str) -> String {
+    input
+        .replace('\n', "\\n")
+        .replace('\t', "\\t")
+        .replace('"', "\\\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::util::escape_string;
+
+    #[test]
+    fn escape_string_works() {
+        let input = "this is \"cool\"";
+        let escaped = escape_string(input);
+
+        assert_eq!(escaped, "this is \\\"cool\\\"");
+
+        let input = "first\nsecond";
+        let escaped = escape_string(input);
+
+        assert_eq!(escaped, "first\\nsecond");
+    }
+}

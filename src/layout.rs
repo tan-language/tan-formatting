@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackIterator};
 
+use crate::util::escape_string;
+
 // #TODO refine this enum, potentially split into 2 enums?
 // #TODO could name this layout 'Cell' or Fragment
 #[derive(Clone, Debug)]
@@ -295,7 +297,7 @@ impl<'a> Arranger<'a> {
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Item(s.clone()),
             Expr::TextSeparator => Layout::Separator, // #TODO different impl!
-            Expr::String(s) => Layout::Item(format!("\"{s}\"")),
+            Expr::String(s) => Layout::Item(format!("\"{}\"", escape_string(s))),
             Expr::Symbol(s) => Layout::Item(s.clone()),
             Expr::Int(n) => Layout::Item(n.to_string()),
             Expr::One => Layout::Item("()".to_string()),
