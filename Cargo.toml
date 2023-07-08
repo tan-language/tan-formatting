@@ -1,9 +1,9 @@
 [package]
-name = "tan_fmt"
-description = "Formatting technology for the Tan Language"
+name = "tan-formatting"
+description = "Formatting infrastructure for the Tan Language"
 version = "0.7.0"
 license = "Apache-2.0"
-repository = "https://github.com/tanlang-org/tan_fmt"
+repository = "https://github.com/tan-language/tan_fmt"
 keywords = ["tan", "language", "formatting", "pretty-print"]
 authors = ["George Moschovitis <gmosx@reizu.org>"]
 edition = "2021"
