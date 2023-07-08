@@ -1,6 +1,6 @@
-# Tan Formatter
+# Tan Formatting
 
-Formatting technology for the Tan Language.
+Formatting infrastructure for the Tan Language.
 
 ## Status
 
