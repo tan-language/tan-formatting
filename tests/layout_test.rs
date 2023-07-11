@@ -1,5 +1,5 @@
 use common::parse_file;
-use tan_fmt::layout::Arranger;
+use tan_formatting::layout::Arranger;
 
 mod common;
 

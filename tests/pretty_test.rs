@@ -1,5 +1,5 @@
 use common::parse_file;
-use tan_fmt::pretty::Formatter;
+use tan_formatting::pretty::Formatter;
 
 use crate::common::read_file;
 
