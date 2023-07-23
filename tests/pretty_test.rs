@@ -84,3 +84,16 @@ pub fn format_pretty_handles_nested_call() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_makes_quoting_uniform() {
+    let exprs = parse_file("quote.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("quote.pretty.tan");
+
+    // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}

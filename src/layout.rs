@@ -171,6 +171,14 @@ impl<'a> Arranger<'a> {
         // #TODO special formatting for `if`.
 
         match head {
+            Expr::Symbol(name) if name == "quot" => {
+                // #todo this is a temp solution, ideally it should recourse into arrange_list again.
+                // Always arrange a `quot` block horizontally.
+                let (exprs, _) = self.arrange_all();
+                layouts.push(Layout::item("'"));
+                layouts.push(Layout::row(exprs));
+                Layout::join(layouts)
+            }
             Expr::Symbol(name) if name == "do" => {
                 // Always arrange a `do` block vertically.
                 let (exprs, _) = self.arrange_all();
