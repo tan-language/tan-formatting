@@ -1,0 +1,9 @@
+(do
+    (let rank 15)
+    (cond
+        ; a full line comment
+        (> rank 10) :high
+        (> rank 5) :medium
+        else :low
+    )
+)

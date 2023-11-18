@@ -108,11 +108,19 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_next_pair(&mut self) -> Option<Layout> {
-        let mut tuple = Vec::new();
+        // #todo add unit-test just for this method.
 
         let Some(expr0) = self.exprs.next() else {
             return None;
         };
+
+        // #insight handles full line comments.
+        // #todo needs more elegant solution.
+        if let Expr::Comment(..) = expr0.unpack() {
+            return Some(self.layout_from_expr(expr0));
+        }
+
+        let mut tuple = Vec::new();
 
         tuple.push(self.layout_from_expr(expr0));
 
@@ -272,6 +280,36 @@ impl<'a> Arranger<'a> {
                     // One binding, arrange horizontally.
                     layouts.push(Layout::item("(let "));
                     layouts.push(Layout::row(bindings));
+                    layouts.push(Layout::item(')'));
+                    Layout::join(layouts)
+                }
+            }
+            // #todo currently this is exactly the same code as for `let`, extract.
+            // #todo hmm not exactly the same, always forces multiline!
+            Expr::Symbol(name) if name == "cond" => {
+                let (clauses, should_force_vertical) = self.arrange_all_pairs();
+
+                if should_force_vertical {
+                    // #todo not relevant for `cond`, remove!
+                    // Special case: one clause with inline comment, arrange vertically.
+                    layouts.push(Layout::item("(cond"));
+                    layouts.push(Layout::indent(clauses));
+                    layouts.push(Layout::apply(Layout::item(')')));
+                    Layout::Stack(layouts)
+                } else if clauses.len() > 1 {
+                    // More than one clause, arrange vertically.
+                    layouts.push(Layout::item("(cond"));
+                    // layouts.push(Layout::row(vec![Layout::item("(cond"), bindings.remove(0)]));
+                    if !clauses.is_empty() {
+                        layouts.push(Layout::align(clauses, 4 /* "(cond " */));
+                    }
+                    layouts.push(Layout::apply(Layout::item(')')));
+                    Layout::Stack(layouts)
+                } else {
+                    // #todo there should never be one clause, remove!
+                    // One clause, arrange horizontally.
+                    layouts.push(Layout::item("(cond "));
+                    layouts.push(Layout::row(clauses));
                     layouts.push(Layout::item(')'));
                     Layout::join(layouts)
                 }
