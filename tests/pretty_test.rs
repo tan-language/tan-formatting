@@ -97,3 +97,16 @@ pub fn format_pretty_makes_quoting_uniform() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_handles_cond() {
+    let exprs = parse_file("cond.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("cond.pretty.tan");
+
+    eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}

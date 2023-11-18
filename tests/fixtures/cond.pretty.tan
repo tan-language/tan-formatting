@@ -1,0 +1,8 @@
+(do
+    (let rank 15)
+    (cond
+        (> rank 10) :high 
+        (> rank 5) :medium 
+        else :low
+    )
+)
