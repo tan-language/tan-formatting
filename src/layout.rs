@@ -108,11 +108,19 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_next_pair(&mut self) -> Option<Layout> {
-        let mut tuple = Vec::new();
+        // #todo add unit-test just for this method.
 
         let Some(expr0) = self.exprs.next() else {
             return None;
         };
+
+        // #insight handles full line comments.
+        // #todo needs more elegant solution.
+        if let Expr::Comment(..) = expr0.unpack() {
+            return Some(self.layout_from_expr(expr0));
+        }
+
+        let mut tuple = Vec::new();
 
         tuple.push(self.layout_from_expr(expr0));
 
