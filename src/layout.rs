@@ -277,25 +277,29 @@ impl<'a> Arranger<'a> {
                 }
             }
             // #todo currently this is exactly the same code as for `let`, extract.
+            // #todo hmm not exactly the same, always forces multiline!
             Expr::Symbol(name) if name == "cond" => {
                 let (mut bindings, should_force_vertical) = self.arrange_all_pairs();
 
                 if should_force_vertical {
-                    // Special case: one binding with inline comment, arrange vertically.
+                    // #todo not relevant for `cond`
+                    // Special case: one clause with inline comment, arrange vertically.
                     layouts.push(Layout::item("(cond"));
                     layouts.push(Layout::indent(bindings));
                     layouts.push(Layout::apply(Layout::item(')')));
                     Layout::Stack(layouts)
                 } else if bindings.len() > 1 {
-                    // More than one binding, arrange vertically.
-                    layouts.push(Layout::row(vec![Layout::item("(cond"), bindings.remove(0)]));
+                    // More than one clause, arrange vertically.
+                    layouts.push(Layout::item("(cond"));
+                    // layouts.push(Layout::row(vec![Layout::item("(cond"), bindings.remove(0)]));
                     if !bindings.is_empty() {
-                        layouts.push(Layout::align(bindings, 6 /* "(cond " */));
+                        layouts.push(Layout::align(bindings, 4 /* "(cond " */));
                     }
                     layouts.push(Layout::apply(Layout::item(')')));
                     Layout::Stack(layouts)
                 } else {
-                    // One binding, arrange horizontally.
+                    // #todo there should never be one clause
+                    // One clause, arrange horizontally.
                     layouts.push(Layout::item("(cond "));
                     layouts.push(Layout::row(bindings));
                     layouts.push(Layout::item(')'));
