@@ -108,3 +108,14 @@ pub fn format_pretty_handles_cond() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_retains_interpolated_strings() {
+    let exprs = parse_file("interpolated-str.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("interpolated-str.pretty.tan");
+
+    assert_eq!(output, expected_output);
+}
