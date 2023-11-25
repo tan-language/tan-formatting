@@ -187,6 +187,13 @@ impl<'a> Arranger<'a> {
                 layouts.push(Layout::row(exprs));
                 Layout::join(layouts)
             }
+            Expr::Symbol(name) if name == "unquot" => {
+                // Always arrange a `unquot` block horizontally.
+                let (exprs, _) = self.arrange_all();
+                layouts.push(Layout::item("$"));
+                layouts.push(Layout::row(exprs));
+                Layout::join(layouts)
+            }
             Expr::Symbol(name) if name == "do" => {
                 // Always arrange a `do` block vertically.
                 let (exprs, _) = self.arrange_all();

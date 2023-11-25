@@ -119,3 +119,16 @@ pub fn format_pretty_retains_interpolated_strings() {
 
     assert_eq!(output, expected_output);
 }
+
+#[test]
+pub fn format_pretty_makes_unquoting_uniform() {
+    let exprs = parse_file("unquote.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("unquote.pretty.tan");
+
+    // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}
