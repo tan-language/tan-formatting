@@ -4,17 +4,17 @@ mod util;
 
 use tan::error::{Error, ErrorNote};
 
-// #TODO reuse the Position from tan?
-// #TODO split into `format_expr`, `format_error`.
-// #TODO add special support for formatting multiple errors?
+// #todo reuse the Position from tan?
+// #todo split into `format_expr`, `format_error`.
+// #todo add special support for formatting multiple errors?
 
 pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
     let Some(range) = &note.range else {
         return format!("{}", note.text);
     };
 
-    // #TODO do this once, outside of this function!
-    // #TODO can we reuse the position line/col?
+    // #todo do this once, outside of this function!
+    // #todo can we reuse the position line/col?
 
     let chars = input.chars();
 
@@ -52,11 +52,11 @@ pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
     //     "^".repeat(len)
     // };
 
-    // #TODO use `^` or `-` depending on note importance, like Rust.
+    // #todo use `^` or `-` depending on note importance, like Rust.
 
     let indicator = "^".repeat(len);
 
-    let col = range.start.index - line_start; // #TODO range.start.col
+    let col = range.start.index - line_start; // #todo range.start.col
     let indicator_space = " ".repeat(col);
 
     format!(
@@ -75,12 +75,12 @@ pub fn format_error(error: &Error) -> String {
     format!("{}\n", error.kind())
 }
 
-// #TODO also format error without input.
-// #TODO implement this in ...Tan :)
-// #TODO format the error as symbolic expression.
-// #TODO format the error as JSON.
-// #TODO make more beautiful than Rust.
-// #TODO add as method to Ranged<E: Error>? e.g. `format_pretty`
+// #todo also format error without input.
+// #todo implement this in ...Tan :)
+// #todo format the error as symbolic expression.
+// #todo format the error as JSON.
+// #todo make more beautiful than Rust.
+// #todo add as method to Ranged<E: Error>? e.g. `format_pretty`
 pub fn format_error_pretty(error: &Error, input: &str) -> String {
     let Some(note) = error.notes.first() else {
         return format!("{}\n at {}", error.kind(), error.file_path);

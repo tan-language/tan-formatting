@@ -5,7 +5,7 @@ use crate::common::read_file;
 
 mod common;
 
-// #TODO a lot of duplication here, refactor.
+// #todo a lot of duplication here, refactor.
 
 #[test]
 pub fn format_pretty_handles_data_input() {

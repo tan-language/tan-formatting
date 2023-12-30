@@ -3,7 +3,7 @@ use tan_formatting::layout::Arranger;
 
 mod common;
 
-// #TODO convert these to tests?
+// #todo convert these to tests?
 
 #[test]
 pub fn arrange_handles_data_input() {
@@ -38,7 +38,7 @@ pub fn arrange_handles_more_code_input() {
     dbg!(&layout);
 }
 
-// #TODO consider renaming `inline` to `side`?
+// #todo consider renaming `inline` to `side`?
 
 #[test]
 pub fn arrange_handles_inline_comments() {

@@ -9,19 +9,19 @@ use crate::{
 
 // #insight The formatter cannot err.
 
-// #TODO align inline/side comments
-// #TODO align vertical pairs (e.g. let)
+// #todo align inline/side comments
+// #todo align vertical pairs (e.g. let)
 
-// #TODO preprocess to handle inline comments?
+// #todo preprocess to handle inline comments?
 
-// #TODO add pragmas to define sections with different formatting options or even disabled formatting.
-// #TODO try to use annotations to define the above-mentioned sections.
-// #TODO rename to `formatter.rs`
-// #TODO optimize formatter to minimize diffs.
-// #TODO try to maintain some empty separator lines.
-// #TODO consider using tabs to indent?
-// #TODO consider allowing absolutely no parameters for the formatter.
-// #TODO idea: pre-process the input, add artificial separator-line annotations to maintain some of the user's separators?
+// #todo add pragmas to define sections with different formatting options or even disabled formatting.
+// #todo try to use annotations to define the above-mentioned sections.
+// #todo rename to `formatter.rs`
+// #todo optimize formatter to minimize diffs.
+// #todo try to maintain some empty separator lines.
+// #todo consider using tabs to indent?
+// #todo consider allowing absolutely no parameters for the formatter.
+// #todo idea: pre-process the input, add artificial separator-line annotations to maintain some of the user's separators?
 
 /// The default indentation size (char count)
 const DEFAULT_INDENT_SIZE: usize = 4;
@@ -39,8 +39,8 @@ pub struct Formatter<'a> {
     col: usize,
 }
 
-// #TODO introduce default constructor.
-// #TODO introduce 'builder' api?
+// #todo introduce default constructor.
+// #todo introduce 'builder' api?
 
 impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Expr]) -> Self {
@@ -62,7 +62,7 @@ impl<'a> Formatter<'a> {
             return "".to_string();
         }
 
-        // #TODO temp solution (sorts annotations by key), ideally we want insertion order? or not?
+        // #todo temp solution (sorts annotations by key), ideally we want insertion order? or not?
 
         // Sort the annotations map, for stable formatting.
         let ann = BTreeMap::from_iter(ann);
@@ -85,7 +85,7 @@ impl<'a> Formatter<'a> {
         output
     }
 
-    // #TODO automatically put `_` separators to numbers.
+    // #todo automatically put `_` separators to numbers.
 
     fn format_layout(&mut self, layout: &Layout) -> String {
         match layout {

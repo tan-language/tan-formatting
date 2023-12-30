@@ -4,12 +4,12 @@ use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackI
 
 use crate::util::escape_string;
 
-// #TODO refine this enum, potentially split into 2 enums?
-// #TODO could name this layout 'Cell' or Fragment
+// #todo refine this enum, potentially split into 2 enums?
+// #todo could name this layout 'Cell' or Fragment
 #[derive(Clone, Debug)]
 pub enum Layout {
     /// Indentation block, supports both indentation and alignment.
-    Indent(Vec<Layout>, Option<usize>), // #TODO no need for Indent, add option to stack
+    Indent(Vec<Layout>, Option<usize>), // #todo no need for Indent, add option to stack
     /// Vertical arrangement
     Stack(Vec<Layout>),
     /// Horizontal arrangement
@@ -50,7 +50,7 @@ impl Layout {
     }
 }
 
-// #TODO find a better name.
+// #todo find a better name.
 pub struct Arranger<'a> {
     exprs: PutBackIterator<'a, Expr>,
 }
@@ -88,7 +88,7 @@ impl<'a> Arranger<'a> {
         Some(layout)
     }
 
-    // #TODO return force_vertical
+    // #todo return force_vertical
     fn arrange_all(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
@@ -175,8 +175,8 @@ impl<'a> Arranger<'a> {
 
         let head = &expr.unpack();
 
-        // #TODO should decide between (h)list/vlist.
-        // #TODO special formatting for `if`.
+        // #todo should decide between (h)list/vlist.
+        // #todo special formatting for `if`.
 
         match head {
             Expr::Symbol(name) if name == "quot" => {
@@ -221,7 +221,7 @@ impl<'a> Arranger<'a> {
                 }
             }
             Expr::Symbol(name) if name == "Array" => {
-                // #TODO more sophisticated Array formatting needed.
+                // #todo more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
                 let (items, should_force_vertical) = self.arrange_all();
@@ -349,7 +349,7 @@ impl<'a> Arranger<'a> {
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Item(s.clone()),
-            Expr::TextSeparator => Layout::Separator, // #TODO different impl!
+            Expr::TextSeparator => Layout::Separator, // #todo different impl!
             Expr::String(s) => Layout::Item(format!("\"{}\"", escape_string(s))),
             Expr::Symbol(s) => Layout::Item(s.clone()),
             Expr::Int(n) => Layout::Item(n.to_string()),
@@ -373,7 +373,7 @@ impl<'a> Arranger<'a> {
 
         if let Some(ann) = ann {
             if ann.len() > 1 {
-                // #TODO give special key to implicit range annotation.
+                // #todo give special key to implicit range annotation.
                 // Remove the range annotation.
                 let mut ann = ann.clone();
                 ann.remove("range");
