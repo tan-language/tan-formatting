@@ -142,7 +142,6 @@ impl<'a> Formatter<'a> {
         // dbg!(&layout);
         let output = self.format_layout(&layout);
         let output = trim_separators(&output);
-        let output = ensure_ends_with_empty_line(&output);
-        output
+        ensure_ends_with_empty_line(&output)
     }
 }

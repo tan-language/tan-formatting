@@ -10,7 +10,7 @@ use tan::error::{Error, ErrorNote};
 
 pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
     let Some(range) = &note.range else {
-        return format!("{}", note.text);
+        return note.text.to_string();
     };
 
     // #todo do this once, outside of this function!

@@ -97,7 +97,7 @@ impl<'a> Arranger<'a> {
         while let Some(layout) = self.arrange_next() {
             if let Layout::Row(v, ..) = &layout {
                 if let Some(Layout::Item(t)) = &v.last() {
-                    force_vertical = t.starts_with(";"); // is comment?
+                    force_vertical = t.starts_with(';'); // is comment?
                 }
             };
 
@@ -225,7 +225,7 @@ impl<'a> Arranger<'a> {
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
                 let (items, should_force_vertical) = self.arrange_all();
-                if items.len() > 0 {
+                if !items.is_empty() {
                     if should_force_vertical {
                         layouts.push(Layout::indent(items));
                         layouts.push(Layout::apply(Layout::item("]")));
