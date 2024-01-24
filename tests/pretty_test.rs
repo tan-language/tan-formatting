@@ -10,7 +10,7 @@ mod common;
 #[test]
 pub fn format_pretty_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
+    let formatter = Formatter::for_dialect(&exprs, "data");
 
     let output = formatter.format();
     let expected_output = read_file("data.pretty.tan");
@@ -23,15 +23,12 @@ pub fn format_pretty_handles_data_input() {
 #[test]
 pub fn format_pretty_handles_data_using_dialect() {
     let exprs = parse_file("data-2.tan").unwrap();
-    let mut formatter = Formatter::new(&exprs);
-    formatter.dialect = "data";
+    let formatter = Formatter::for_dialect(&exprs, "data");
 
     let output = formatter.format();
     let expected_output = read_file("data-2.pretty.tan");
 
-    eprintln!("{output}");
-
-    // assert_eq!(output, expected_output);
+    assert_eq!(output, expected_output);
 }
 
 #[test]

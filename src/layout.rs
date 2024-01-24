@@ -4,8 +4,13 @@ use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackI
 
 use crate::util::escape_string;
 
+// #todo add some explanation about the design, e.g. what does Layout do.
+
+// #todo somehow extract the force_vertical computation to include all parameters.
+
 // #todo refine this enum, potentially split into 2 enums?
 // #todo could name this layout 'Cell' or Fragment
+/// A Layout is an abstract representation (model) of formatted source.
 #[derive(Clone, Debug)]
 pub enum Layout {
     /// Indentation block, supports both indentation and alignment.
@@ -51,13 +56,20 @@ impl Layout {
 }
 
 // #todo find a better name.
+/// The Arranger organizes the input expressions into an abstract Layout. The
+/// Formatter renders the Layout model into the formatted output string.
 pub struct Arranger<'a> {
+    // #todo consider different names, e.g. `flavor`?
+    // #todo make an enum?
+    // #todo use a builder pattern.
+    pub dialect: &'static str,
     exprs: PutBackIterator<'a, Expr>,
 }
 
 impl<'a> Arranger<'a> {
-    pub fn new(exprs: &'a [Expr]) -> Self {
+    pub fn new(exprs: &'a [Expr], dialect: &'static str) -> Self {
         Self {
+            dialect,
             exprs: PutBackIterator::new(exprs),
         }
     }
@@ -225,6 +237,11 @@ impl<'a> Arranger<'a> {
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
                 let (items, should_force_vertical) = self.arrange_all();
+
+                // #todo consider allowing horizontal for only one element.
+                // For `data` dialect always force vertical.
+                let should_force_vertical = should_force_vertical || self.dialect == "data";
+
                 if !items.is_empty() {
                     if should_force_vertical {
                         layouts.push(Layout::indent(items));
@@ -254,7 +271,13 @@ impl<'a> Arranger<'a> {
             Expr::Symbol(name) if name == "Dict" => {
                 let (bindings, should_force_vertical) = self.arrange_all_pairs();
 
-                if should_force_vertical || bindings.len() > 2 {
+                // If more than 2 bindings force vertical.
+                let should_force_vertical = should_force_vertical || bindings.len() > 2;
+
+                // For `data` dialect always force vertical.
+                let should_force_vertical = should_force_vertical || self.dialect == "data";
+
+                if should_force_vertical {
                     layouts.push(Layout::item("{"));
                     layouts.push(Layout::indent(bindings));
                     layouts.push(Layout::apply(Layout::item("}")));
@@ -365,7 +388,7 @@ impl<'a> Arranger<'a> {
 
                 // #insight Recursive data structure, we recurse.
 
-                let mut list_arranger = Arranger::new(exprs);
+                let mut list_arranger = Arranger::new(exprs, self.dialect);
                 list_arranger.arrange_list()
             }
             _ => Layout::Item(expr.to_string()),
