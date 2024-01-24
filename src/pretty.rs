@@ -29,12 +29,19 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
 
+const DEFAULT_DIALECT: &str = "code";
+
 pub struct Formatter<'a> {
     arranger: Arranger<'a>,
-    indent: usize,
     indent_size: usize,
     #[allow(dead_code)]
     line_size: usize,
+    // #todo consider different names, e.g. `flavor`?
+    // #todo make an enum?
+    // #todo use a builder pattern.
+    #[allow(dead_code)]
+    pub dialect: &'static str,
+    indent: usize,
     #[allow(dead_code)]
     col: usize,
 }
@@ -49,6 +56,7 @@ impl<'a> Formatter<'a> {
             indent: 0,
             indent_size: DEFAULT_INDENT_SIZE,
             line_size: DEFAULT_LINE_SIZE,
+            dialect: DEFAULT_DIALECT,
             col: 0,
         }
     }
