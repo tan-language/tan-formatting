@@ -8,6 +8,10 @@ use crate::util::escape_string;
 
 // #todo somehow extract the force_vertical computation to include all parameters.
 
+// #todo conds get corrupted
+// #todo remove empty lines from beginning of blocks!
+// #todo implement `html` and `css` dialects
+
 // #todo refine this enum, potentially split into 2 enums?
 // #todo could name this layout 'Cell' or Fragment
 /// A Layout is an abstract representation (model) of formatted source.
@@ -55,6 +59,13 @@ impl Layout {
     }
 }
 
+/// An arranger mode to allow for formatting specializations.
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+enum ArrangerMode {
+    Default,
+    Let, // #todo find a better name, more encompassing.s
+}
+
 // #todo find a better name.
 /// The Arranger organizes the input expressions into an abstract Layout. The
 /// Formatter renders the Layout model into the formatted output string.
@@ -64,6 +75,7 @@ pub struct Arranger<'a> {
     // #todo use a builder pattern.
     pub dialect: &'static str,
     exprs: PutBackIterator<'a, Expr>,
+    mode: ArrangerMode,
 }
 
 impl<'a> Arranger<'a> {
@@ -71,6 +83,7 @@ impl<'a> Arranger<'a> {
         Self {
             dialect,
             exprs: PutBackIterator::new(exprs),
+            mode: ArrangerMode::Default,
         }
     }
 
@@ -221,7 +234,14 @@ impl<'a> Arranger<'a> {
                     self.arrange_next().unwrap(),
                 ]));
                 let (block, should_force_vertical) = self.arrange_all();
-                if should_force_vertical || block.len() > 1 {
+
+                // #todo consider making `if` always multiline? no.
+
+                let should_force_vertical = should_force_vertical || block.len() > 1;
+
+                let should_force_vertical = should_force_vertical || self.mode == ArrangerMode::Let;
+
+                if should_force_vertical {
                     layouts.push(Layout::indent(block));
                     layouts.push(Layout::apply(Layout::item(")")));
                     Layout::Stack(layouts)
@@ -290,7 +310,12 @@ impl<'a> Arranger<'a> {
                 }
             }
             Expr::Symbol(name) if name == "let" => {
+                // #todo add a more intuitive mechanism for mode, maybe a stack?
+                let old_mode = self.mode;
+                self.mode = ArrangerMode::Let;
                 let (mut bindings, should_force_vertical) = self.arrange_all_pairs();
+
+                self.mode = old_mode;
 
                 if should_force_vertical {
                     // Special case: one binding with inline comment, arrange vertically.
@@ -389,6 +414,7 @@ impl<'a> Arranger<'a> {
                 // #insight Recursive data structure, we recurse.
 
                 let mut list_arranger = Arranger::new(exprs, self.dialect);
+                list_arranger.mode = self.mode;
                 list_arranger.arrange_list()
             }
             _ => Layout::Item(expr.to_string()),

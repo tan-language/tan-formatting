@@ -45,6 +45,19 @@ pub fn format_pretty_handles_code_input() {
 }
 
 #[test]
+pub fn format_pretty_handles_function_definitions() {
+    let exprs = parse_file("func-def.tan").unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file("func-def.pretty.tan");
+
+    // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}
+
+#[test]
 pub fn format_pretty_handles_more_code_input() {
     let exprs = parse_file("fibalike.tan").unwrap();
     let formatter = Formatter::new(&exprs);
