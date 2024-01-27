@@ -227,7 +227,7 @@ impl<'a> Arranger<'a> {
                 layouts.push(Layout::apply(Layout::item(")")));
                 Layout::Stack(layouts)
             }
-            Expr::Symbol(name) if name == "Func" || name == "if" => {
+            Expr::Symbol(name) if name == "Func" || name == "if" || name == "for" => {
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::row(vec![
                     Layout::item(format!("({name}")),
@@ -238,6 +238,12 @@ impl<'a> Arranger<'a> {
                 // #todo consider making `if` always multiline? no.
 
                 let should_force_vertical = should_force_vertical || block.len() > 1;
+
+                // #todo reconsider forced-multiline for `for`.
+                // #insight
+                // force `for`, to always be multiline, as it doesn't return a
+                // useful value.
+                let should_force_vertical = should_force_vertical || name == "for";
 
                 let should_force_vertical = should_force_vertical || self.mode == ArrangerMode::Let;
 

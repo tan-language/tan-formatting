@@ -1,0 +1,2 @@
+(for [item items]
+    (writeln item))
