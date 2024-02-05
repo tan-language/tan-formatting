@@ -57,113 +57,47 @@ pub fn format_pretty_handles_function_definitions() {
 
 #[test]
 pub fn format_pretty_handles_more_code_input() {
-    let exprs = parse_file("fibalike.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("fibalike.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("fibalike");
 }
 
 #[test]
 pub fn format_pretty_handles_inline_comments() {
-    let exprs = parse_file("inline-comments.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("inline-comments.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("inline-comments");
 }
 
 #[test]
 pub fn format_pretty_handles_nested_function() {
-    let exprs = parse_file("nested-function.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("nested-function.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("nested-function");
 }
 
 #[test]
 pub fn format_pretty_handles_nested_call() {
-    let exprs = parse_file("nested-call.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("nested-call.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("nested-call");
 }
 
 #[test]
 pub fn format_pretty_makes_quoting_uniform() {
-    let exprs = parse_file("quote.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("quote.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("quote");
 }
 
 #[test]
 pub fn format_pretty_handles_cond() {
-    let exprs = parse_file("cond.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("cond.pretty.tan");
-
-    assert_eq!(output, expected_output);
+    test_fixture("cond");
 }
 
 #[test]
 pub fn format_pretty_handles_for() {
-    let exprs = parse_file("for.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("for.pretty.tan");
-
-    assert_eq!(output, expected_output);
+    test_fixture("for");
 }
 
 #[test]
 pub fn format_pretty_retains_interpolated_strings() {
-    let exprs = parse_file("interpolated-str.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("interpolated-str.pretty.tan");
-
-    assert_eq!(output, expected_output);
+    test_fixture("interpolated-str");
 }
 
 #[test]
 pub fn format_pretty_makes_unquoting_uniform() {
-    let exprs = parse_file("unquote.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("unquote.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("unquote");
 }
 
 // #todo make this test pass.
