@@ -1,13 +1,18 @@
-; pathological snippet
-; #think the formatter cannot format vertically, but it should at least handle the inline comment
 (let sanitize-path (Func [path]
-    (replace path
-        " " "-"
-        "!" ""
-        "(" ""
+    (replace
+        path
+        " "
+        "-"
+        "!"
+        ""
+        "("
+        ""
         ; #todo only extract the rest
-        ":" "-"
-        "'" ""
-        ")" ""
+        ":"
+        "-"
+        "'"
+        ""
+        ")"
+        ""
     )
 ))

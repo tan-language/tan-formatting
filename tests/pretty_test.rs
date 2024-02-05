@@ -92,7 +92,9 @@ pub fn format_pretty_makes_unquoting_uniform() {
 }
 
 // #todo make this test pass.
-// #[test]
-// pub fn pairs_and_comments_pathological_case() {
-//     test_fixture("pairs-and-comments");
-// }
+// pathological snippet with inline comment.
+// #think the formatter cannot format vertically, but it should at least handle the inline comment
+#[test]
+pub fn pairs_and_comments_pathological_case() {
+    test_code_fixture("pairs-and-comments");
+}

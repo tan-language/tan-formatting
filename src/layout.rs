@@ -25,6 +25,7 @@ pub enum Layout {
     Stack(Vec<Layout>),
     /// Horizontal arrangement
     Row(Vec<Layout>, String),
+    // #todo wtf is this?
     Apply(Box<Layout>),
     Item(String),
     Ann(HashMap<String, Expr>, Box<Layout>),
@@ -95,6 +96,9 @@ impl<'a> Arranger<'a> {
 
         let layout = self.layout_from_expr(expr0);
 
+        // #insight
+        // Fetch the next expression and try to detect an inline comment.
+        // If an inline comment is found, force vertical layout.
         if let Some(expr1) = self.exprs.next() {
             match expr1.unpack() {
                 Expr::Comment(..) => {
@@ -114,18 +118,31 @@ impl<'a> Arranger<'a> {
         Some(layout)
     }
 
-    // #todo return force_vertical
     fn arrange_all(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
         let mut force_vertical = false;
 
         while let Some(layout) = self.arrange_next() {
+            // force vertical if there is an inline comment.
             if let Layout::Row(v, ..) = &layout {
                 if let Some(Layout::Item(t)) = &v.last() {
-                    force_vertical = t.starts_with(';'); // is comment?
+                    force_vertical = force_vertical || t.starts_with(';'); // is comment?
                 }
             };
+
+            // force vertical if there is a full-line comment.
+            if let Layout::Item(t) = &layout {
+                // // is comment?
+                // if t.starts_with(';') {
+                //     layouts.push(Layout::Indent(
+                //         vec![Layout::Separator, layout, Layout::Separator],
+                //         Some(0),
+                //     ));
+                //     continue;
+                // }
+                force_vertical = force_vertical || t.starts_with(';'); // is comment?
+            }
 
             layouts.push(layout);
         }
