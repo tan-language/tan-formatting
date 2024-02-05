@@ -4,6 +4,8 @@ use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackI
 
 use crate::util::escape_string;
 
+// #todo use source-code annotations to control formatting
+
 // #todo add some explanation about the design, e.g. what does Layout do.
 
 // #todo somehow extract the force_vertical computation to include all parameters.
@@ -295,6 +297,7 @@ impl<'a> Arranger<'a> {
                 }
             }
             Expr::Symbol(name) if name == "Dict" => {
+                // #todo in data mode consider formatting empty Dict like this: {}
                 let (bindings, should_force_vertical) = self.arrange_all_pairs();
 
                 // If more than 2 bindings force vertical.

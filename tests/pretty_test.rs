@@ -7,6 +7,20 @@ mod common;
 
 // #todo a lot of duplication here, refactor.
 
+// #todo find a better name.
+// #todo support dialect.
+fn test_fixture(name: &str) {
+    let exprs = parse_file(&format!("{name}.tan")).unwrap();
+    let formatter = Formatter::new(&exprs);
+
+    let output = formatter.format();
+    let expected_output = read_file(&format!("{name}.pretty.tan"));
+
+    // eprintln!("{output}");
+
+    assert_eq!(output, expected_output);
+}
+
 #[test]
 pub fn format_pretty_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
@@ -33,28 +47,12 @@ pub fn format_pretty_handles_data_using_dialect() {
 
 #[test]
 pub fn format_pretty_handles_code_input() {
-    let exprs = parse_file("code.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("code.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("code");
 }
 
 #[test]
 pub fn format_pretty_handles_function_definitions() {
-    let exprs = parse_file("func-def.tan").unwrap();
-    let formatter = Formatter::new(&exprs);
-
-    let output = formatter.format();
-    let expected_output = read_file("func-def.pretty.tan");
-
-    // eprintln!("{output}");
-
-    assert_eq!(output, expected_output);
+    test_fixture("func-def");
 }
 
 #[test]
@@ -167,3 +165,9 @@ pub fn format_pretty_makes_unquoting_uniform() {
 
     assert_eq!(output, expected_output);
 }
+
+// #todo make this test pass.
+// #[test]
+// pub fn pairs_and_comments_pathological_case() {
+//     test_fixture("pairs-and-comments");
+// }
