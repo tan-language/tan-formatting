@@ -1,5 +1,5 @@
 use common::parse_file;
-use tan_formatting::pretty::Formatter;
+use tan_formatting::{pretty::Formatter, types::Dialect};
 
 use crate::common::read_file;
 
@@ -24,7 +24,7 @@ fn test_fixture(name: &str) {
 #[test]
 pub fn format_pretty_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
-    let formatter = Formatter::for_dialect(&exprs, "data");
+    let formatter = Formatter::for_dialect(&exprs, Dialect::Data);
 
     let output = formatter.format();
     let expected_output = read_file("data.pretty.tan");
@@ -37,7 +37,7 @@ pub fn format_pretty_handles_data_input() {
 #[test]
 pub fn format_pretty_handles_data_using_dialect() {
     let exprs = parse_file("data-2.tan").unwrap();
-    let formatter = Formatter::for_dialect(&exprs, "data");
+    let formatter = Formatter::for_dialect(&exprs, Dialect::Data);
 
     let output = formatter.format();
     let expected_output = read_file("data-2.pretty.tan");

@@ -1,5 +1,6 @@
 pub mod layout;
 pub mod pretty;
+pub mod types;
 mod util;
 
 use tan::error::{Error, ErrorNote};

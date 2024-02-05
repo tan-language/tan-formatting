@@ -1,5 +1,5 @@
 use common::parse_file;
-use tan_formatting::layout::Arranger;
+use tan_formatting::{layout::Arranger, types::Dialect};
 
 mod common;
 
@@ -8,7 +8,7 @@ mod common;
 #[test]
 pub fn arrange_handles_data_input() {
     let exprs = parse_file("data.tan").unwrap();
-    let mut arranger = Arranger::new(&exprs, "data");
+    let mut arranger = Arranger::new(&exprs, Dialect::Data);
     let layout = arranger.arrange();
 
     dbg!(&layout);
@@ -23,7 +23,7 @@ pub fn arrange_handles_data_input() {
 #[test]
 pub fn arrange_handles_code_input() {
     let exprs = parse_file("code.tan").unwrap();
-    let mut arranger = Arranger::new(&exprs, "code");
+    let mut arranger = Arranger::new(&exprs, Dialect::Code);
     let layout = arranger.arrange();
 
     dbg!(&layout);
@@ -32,7 +32,7 @@ pub fn arrange_handles_code_input() {
 #[test]
 pub fn arrange_handles_more_code_input() {
     let exprs = parse_file("fibalike.tan").unwrap();
-    let mut arranger = Arranger::new(&exprs, "code");
+    let mut arranger = Arranger::new(&exprs, Dialect::Code);
     let layout = arranger.arrange();
 
     dbg!(&layout);
@@ -43,7 +43,7 @@ pub fn arrange_handles_more_code_input() {
 #[test]
 pub fn arrange_handles_inline_comments() {
     let exprs = parse_file("inline-comments.tan").unwrap();
-    let mut arranger = Arranger::new(&exprs, "code");
+    let mut arranger = Arranger::new(&exprs, Dialect::Code);
     let layout = arranger.arrange();
 
     eprintln!("{:?}", layout);

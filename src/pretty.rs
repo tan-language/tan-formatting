@@ -4,6 +4,7 @@ use tan::expr::Expr;
 
 use crate::{
     layout::{Arranger, Layout},
+    types::Dialect,
     util::{ensure_ends_with_empty_line, trim_separators},
 };
 
@@ -29,7 +30,7 @@ const DEFAULT_INDENT_SIZE: usize = 4;
 /// The default (target) line size (char count)
 const DEFAULT_LINE_SIZE: usize = 80;
 
-const DEFAULT_DIALECT: &str = "code";
+// const DEFAULT_DIALECT: &str = "code";
 
 pub struct Formatter<'a> {
     arranger: Arranger<'a>,
@@ -37,9 +38,8 @@ pub struct Formatter<'a> {
     #[allow(dead_code)]
     line_size: usize,
     // #todo consider different names, e.g. `flavor`?
-    // #todo make an enum?
     // #todo use a builder pattern.
-    pub dialect: &'static str,
+    pub dialect: Dialect,
     indent: usize,
     #[allow(dead_code)]
     col: usize,
@@ -50,11 +50,11 @@ pub struct Formatter<'a> {
 
 impl<'a> Formatter<'a> {
     pub fn new(exprs: &'a [Expr]) -> Self {
-        Self::for_dialect(exprs, DEFAULT_DIALECT)
+        Self::for_dialect(exprs, Dialect::default())
     }
 
     // #todo find a better name.
-    pub fn for_dialect(exprs: &'a [Expr], dialect: &'static str) -> Self {
+    pub fn for_dialect(exprs: &'a [Expr], dialect: Dialect) -> Self {
         // #todo lazy-initialize the Arranger.
         Self {
             arranger: Arranger::new(exprs, dialect),
