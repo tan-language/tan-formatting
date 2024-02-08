@@ -14,6 +14,9 @@ pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
         return note.text.to_string();
     };
 
+    // #todo wow, it doesn't use the position line, col, it uses the older code!
+    println!("+++ {:?}", range.start);
+
     // #todo do this once, outside of this function!
     // #todo can we reuse the position line/col?
 
@@ -73,7 +76,24 @@ pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
 }
 
 pub fn format_error(error: &Error) -> String {
-    format!("{}\n", error.kind())
+    format!("{} at {}", error.kind(), error.file_path)
+}
+
+// #todo reuse this in format_error_pretty.
+pub fn format_error_short(error: &Error) -> String {
+    if let Some(note) = error.notes.first() {
+        if let Some(range) = &note.range {
+            let position = &range.start;
+            return format!(
+                "{} at {}:{}:{}",
+                error.kind(),
+                error.file_path,
+                position.line + 1,
+                position.col + 1,
+            );
+        }
+    }
+    format!("{} at {}", error.kind(), error.file_path)
 }
 
 // #todo also format error without input.
