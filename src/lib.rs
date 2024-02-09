@@ -14,59 +14,27 @@ pub fn format_error_note_pretty(note: &ErrorNote, input: &str) -> String {
         return note.text.to_string();
     };
 
-    // #todo wow, it doesn't use the position line, col, it uses the older code!
-    println!("+++ {:?}", range.start);
+    // #insight
+    // Currently because of wrong input the line may be missing, so we cannot
+    // unwrap.
+    let line_str = input.lines().nth(range.start.line).unwrap_or_else(|| "???");
 
-    // #todo do this once, outside of this function!
-    // #todo can we reuse the position line/col?
-
-    let chars = input.chars();
-
-    let mut index: usize = 0;
-    let mut line = 0;
-    let mut line_start: usize = 0;
-    let mut line_str = String::new();
-
-    for c in chars {
-        index += 1;
-
-        if c == '\n' {
-            if index > range.start.index {
-                break;
-            }
-
-            line += 1;
-            line_start = index;
-
-            line_str.clear();
-
-            continue;
-        }
-
-        line_str.push(c);
-    }
-
-    let line_space = " ".repeat(format!("{}", line + 1).len());
+    let line_space = " ".repeat(format!("{}", range.start.line + 1).len());
 
     let len = range.end.index - range.start.index;
-
-    // let indicator = if len == 1 {
-    //     "^--- near here".to_owned()
-    // } else {
-    //     "^".repeat(len)
-    // };
 
     // #todo use `^` or `-` depending on note importance, like Rust.
 
     let indicator = "^".repeat(len);
 
-    let col = range.start.index - line_start; // #todo range.start.col
-    let indicator_space = " ".repeat(col);
+    let indicator_space = " ".repeat(range.start.col);
+
+    // #todo trim the leading spaces from the line?
 
     format!(
         "{}|\n{}| {}\n{}|{} {} {}",
         line_space,
-        line + 1,
+        range.start.line + 1,
         line_str,
         line_space,
         indicator_space,
