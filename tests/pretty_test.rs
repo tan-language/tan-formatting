@@ -98,8 +98,13 @@ pub fn pairs_and_comments_pathological_case() {
     test_code_fixture("pairs-and-comments");
 }
 
-// #todo make this 
+// #todo make this
 // #[test]
 // pub fn should_handle_multiline_text() {
 //     test_code_fixture("multi-line-text");
 // }
+
+#[test]
+pub fn should_format_ranges() {
+    test_code_fixture("range");
+}
