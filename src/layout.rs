@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use tan::{
-    expr::{format_value, Expr},
+    expr::Expr,
     util::{fmt::format_float, put_back_iterator::PutBackIterator},
 };
 
@@ -134,14 +134,15 @@ impl<'a> Arranger<'a> {
 
             // #todo make a constant, find a good threshold value.
             // #todo compute from max_line_len?
-            let item_length_vertical_arrange_threshold = 8;
+            // let item_length_vertical_arrange_threshold = 8;
 
             // force vertical if there is a full-line comment.
             // force vertical if an item length exceeds a threshold.
             if let Layout::Item(item) = &layout {
-                force_vertical = force_vertical
-                || item.starts_with(';') // is comment?
-                || item.len() > item_length_vertical_arrange_threshold; // is long item?
+                force_vertical = force_vertical || item.starts_with(';') // is comment?
+                                                                         // force_vertical = force_vertical
+                                                                         // || item.starts_with(';') // is comment?
+                                                                         // || item.len() > item_length_vertical_arrange_threshold; // is long item?
             }
 
             layouts.push(layout);
@@ -156,8 +157,6 @@ impl<'a> Arranger<'a> {
 
         let expr0 = self.exprs.next()?;
 
-        eprintln!("---1 {}", format_value(expr0));
-
         // #insight handles full line comments.
         // #todo needs more elegant solution.
         if let Expr::Comment(..) = expr0.unpack() {
@@ -169,8 +168,6 @@ impl<'a> Arranger<'a> {
         tuple.push(self.layout_from_expr(expr0));
 
         let expr1 = self.exprs.next()?;
-
-        eprintln!("---2 {}", format_value(expr1));
 
         tuple.push(self.layout_from_expr(expr1));
 
@@ -253,7 +250,6 @@ impl<'a> Arranger<'a> {
             Expr::Symbol(name) | Expr::Type(name)
                 if name == "if" || name == "for" || name == "Func" =>
             {
-                eprintln!("~~~~~ {name}");
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::row(vec![
                     Layout::item(format!("({name}")),
@@ -272,8 +268,6 @@ impl<'a> Arranger<'a> {
                 let should_force_vertical = should_force_vertical || name == "for";
 
                 let should_force_vertical = should_force_vertical || self.mode == ArrangerMode::Let;
-
-                println!("--- {should_force_vertical}");
 
                 if should_force_vertical {
                     layouts.push(Layout::indent(block));
