@@ -151,6 +151,38 @@ impl<'a> Arranger<'a> {
         (layouts, force_vertical)
     }
 
+    // #todo temp specialize arrange_all for arrays.
+    fn arrange_all_array(&mut self) -> (Vec<Layout>, bool) {
+        let mut layouts = Vec::new();
+
+        let mut force_vertical = false;
+
+        while let Some(layout) = self.arrange_next() {
+            // force vertical if there is an inline comment.
+            if let Layout::Row(v, ..) = &layout {
+                if let Some(Layout::Item(t)) = &v.last() {
+                    force_vertical = force_vertical || t.starts_with(';'); // is comment?
+                }
+            };
+
+            // #todo make a constant, find a good threshold value.
+            // #todo compute from max_line_len?
+            let item_length_vertical_arrange_threshold = 8;
+
+            // force vertical if there is a full-line comment.
+            // force vertical if an item length exceeds a threshold.
+            if let Layout::Item(item) = &layout {
+                force_vertical = force_vertical
+                    || item.starts_with(';') // is comment?
+                    || item.len() > item_length_vertical_arrange_threshold; // is long item?
+            }
+
+            layouts.push(layout);
+        }
+
+        (layouts, force_vertical)
+    }
+
     // #todo add doc-comment.
     fn arrange_next_pair(&mut self) -> Option<Layout> {
         // #todo add unit-test just for this method.
@@ -285,6 +317,7 @@ impl<'a> Arranger<'a> {
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
                 let (items, should_force_vertical) = self.arrange_all();
+                // let (items, should_force_vertical) = self.arrange_all_array();
 
                 // #todo consider allowing horizontal for only one element.
                 // For `data` dialect always force vertical.

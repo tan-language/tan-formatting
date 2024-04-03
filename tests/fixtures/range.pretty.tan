@@ -2,10 +2,10 @@
     (writeln x)
 )
 
-(for [x 0..10/3]
+(for [x 0..10|3]
     (writeln x)
 )
 
-(for [x 0.2..10.2/3.1]
+(for [x 0.2..10.2|3.1]
     (writeln x)
 )
