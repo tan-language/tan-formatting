@@ -65,12 +65,20 @@ impl Layout {
     }
 }
 
+// #todo should allow for multiple concurrent modes?
 /// An arranger mode to allow for formatting specializations.
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum ArrangerMode {
     Default,
-    Let, // #todo find a better name, more encompassing.s
+    // #todo document what this does.
+    // #todo find a better name, more encompassing.
+    Let,
+    // Forces inline alignment, for example for function arguments.
+    Inline,
 }
+
+// #todo should allow for multiple modes, make a Set.
+// #todo maybe Dialects should just get expanded to modes?
 
 // #todo find a better name.
 /// The Arranger organizes the input expressions into an abstract Layout. The
@@ -151,11 +159,14 @@ impl<'a> Arranger<'a> {
         (layouts, force_vertical)
     }
 
+    // #insight this is problematic for function parameter arrays!
     // #todo temp specialize arrange_all for arrays.
     fn arrange_all_array(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
         let mut force_vertical = false;
+
+        let mut items_cumulative_length = 0;
 
         while let Some(layout) = self.arrange_next() {
             // force vertical if there is an inline comment.
@@ -172,12 +183,21 @@ impl<'a> Arranger<'a> {
             // force vertical if there is a full-line comment.
             // force vertical if an item length exceeds a threshold.
             if let Layout::Item(item) = &layout {
+                items_cumulative_length += item.len();
+
                 force_vertical = force_vertical
                     || item.starts_with(';') // is comment?
-                    || item.len() > item_length_vertical_arrange_threshold; // is long item?
+                    || (self.mode != ArrangerMode::Inline && item.len() > item_length_vertical_arrange_threshold);
+                // is long item?
             }
 
             layouts.push(layout);
+        }
+
+        if self.mode != ArrangerMode::Inline {
+            // #todo find a good threshold!
+            // #todo also support wrapping to next line.
+            force_vertical = force_vertical || items_cumulative_length > 32;
         }
 
         (layouts, force_vertical)
@@ -285,7 +305,18 @@ impl<'a> Arranger<'a> {
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::row(vec![
                     Layout::item(format!("({name}")),
-                    self.arrange_next().unwrap(),
+                    // #todo special handling for `for` also needed, separate from Func.
+                    // #todo could set mode here!
+                    // #todo #hack nasty, refactor!
+                    if name == "Func" || name == "for" {
+                        let old_mode = self.mode;
+                        self.mode = ArrangerMode::Inline;
+                        let layout = self.arrange_next().unwrap();
+                        self.mode = old_mode;
+                        layout
+                    } else {
+                        self.arrange_next().unwrap()
+                    },
                 ]));
                 let (block, should_force_vertical) = self.arrange_all();
 
@@ -316,8 +347,8 @@ impl<'a> Arranger<'a> {
                 // #todo more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
                 layouts.push(Layout::item("["));
-                let (items, should_force_vertical) = self.arrange_all();
-                // let (items, should_force_vertical) = self.arrange_all_array();
+                // let (items, should_force_vertical) = self.arrange_all();
+                let (items, should_force_vertical) = self.arrange_all_array();
 
                 // #todo consider allowing horizontal for only one element.
                 // For `data` dialect always force vertical.

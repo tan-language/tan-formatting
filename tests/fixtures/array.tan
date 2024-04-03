@@ -1,0 +1,2 @@
+(let values [1 2 3 4])
+(let values ["One" "litle" "cat" "is" "sitting" "next" "to" "the" "table"])

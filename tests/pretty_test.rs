@@ -108,3 +108,8 @@ pub fn pairs_and_comments_pathological_case() {
 pub fn should_format_ranges() {
     test_code_fixture("range");
 }
+
+#[test]
+pub fn should_handle_arrays() {
+    test_code_fixture("array");
+}
