@@ -131,13 +131,6 @@ impl<'a> Formatter<'a> {
                 let string = self.format_layout(l);
                 self.apply_indent(string, self.indent)
             }
-            // Layout::Indent(l, indent_size) => {
-            //     let indent_size = indent_size.unwrap_or(self.indent_size);
-            //     self.indent += indent_size;
-            //     let string = self.format_layout(l, self.indent);
-            //     self.indent -= indent_size;
-            //     string
-            // }
             Layout::Ann(ann, l) => {
                 let ann = self.format_annotations(ann);
                 let string = self.format_layout(l);

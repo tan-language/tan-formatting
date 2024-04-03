@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use tan::{expr::Expr, util::fmt::format_float, util::put_back_iterator::PutBackIterator};
+use tan::{
+    expr::{format_value, Expr},
+    util::{fmt::format_float, put_back_iterator::PutBackIterator},
+};
 
 use crate::{types::Dialect, util::escape_string};
 
@@ -90,9 +93,7 @@ impl<'a> Arranger<'a> {
     }
 
     fn arrange_next(&mut self) -> Option<Layout> {
-        let Some(expr0) = self.exprs.next() else {
-            return None;
-        };
+        let expr0 = self.exprs.next()?;
 
         let layout = self.layout_from_expr(expr0);
 
@@ -131,17 +132,16 @@ impl<'a> Arranger<'a> {
                 }
             };
 
+            // #todo make a constant, find a good threshold value.
+            // #todo compute from max_line_len?
+            let item_length_vertical_arrange_threshold = 8;
+
             // force vertical if there is a full-line comment.
-            if let Layout::Item(t) = &layout {
-                // // is comment?
-                // if t.starts_with(';') {
-                //     layouts.push(Layout::Indent(
-                //         vec![Layout::Separator, layout, Layout::Separator],
-                //         Some(0),
-                //     ));
-                //     continue;
-                // }
-                force_vertical = force_vertical || t.starts_with(';'); // is comment?
+            // force vertical if an item length exceeds a threshold.
+            if let Layout::Item(item) = &layout {
+                force_vertical = force_vertical
+                || item.starts_with(';') // is comment?
+                || item.len() > item_length_vertical_arrange_threshold; // is long item?
             }
 
             layouts.push(layout);
@@ -150,12 +150,13 @@ impl<'a> Arranger<'a> {
         (layouts, force_vertical)
     }
 
+    // #todo add doc-comment.
     fn arrange_next_pair(&mut self) -> Option<Layout> {
         // #todo add unit-test just for this method.
 
-        let Some(expr0) = self.exprs.next() else {
-            return None;
-        };
+        let expr0 = self.exprs.next()?;
+
+        eprintln!("---1 {}", format_value(expr0));
 
         // #insight handles full line comments.
         // #todo needs more elegant solution.
@@ -167,9 +168,9 @@ impl<'a> Arranger<'a> {
 
         tuple.push(self.layout_from_expr(expr0));
 
-        let Some(expr1) = self.exprs.next() else {
-            return None;
-        };
+        let expr1 = self.exprs.next()?;
+
+        eprintln!("---2 {}", format_value(expr1));
 
         tuple.push(self.layout_from_expr(expr1));
 
@@ -194,20 +195,20 @@ impl<'a> Arranger<'a> {
     fn arrange_all_pairs(&mut self) -> (Vec<Layout>, bool) {
         let mut layouts = Vec::new();
 
-        let mut force_vertical = false;
+        let mut should_force_vertical = false;
 
         while let Some(layout) = self.arrange_next_pair() {
             if let Layout::Row(items, ..) = &layout {
                 if items.len() > 2 {
                     // If a pair has an inline comments, force vertical layout
-                    force_vertical = true;
+                    should_force_vertical = true;
                 }
             };
 
             layouts.push(layout);
         }
 
-        (layouts, force_vertical)
+        (layouts, should_force_vertical)
     }
 
     fn arrange_list(&mut self) -> Layout {
@@ -216,10 +217,12 @@ impl<'a> Arranger<'a> {
 
         let mut layouts = Vec::new();
 
-        let head = &expr.unpack();
+        let head = expr.unpack();
 
         // #todo should decide between (h)list/vlist.
         // #todo special formatting for `if`.
+
+        // #todo #warning (Func [...] ...) generate an Expr::Type("Func") !!
 
         match head {
             Expr::Symbol(name) if name == "quot" => {
@@ -245,7 +248,12 @@ impl<'a> Arranger<'a> {
                 layouts.push(Layout::apply(Layout::item(")")));
                 Layout::Stack(layouts)
             }
-            Expr::Symbol(name) if name == "Func" || name == "if" || name == "for" => {
+            // #todo #hack super nasty way to handle both Symbol and Type.
+            // #todo #warning (Func [...] ...) generate an Expr::Type("Func") !!
+            Expr::Symbol(name) | Expr::Type(name)
+                if name == "if" || name == "for" || name == "Func" =>
+            {
+                eprintln!("~~~~~ {name}");
                 // The first expr is rendered inline, the rest are rendered vertically.
                 layouts.push(Layout::row(vec![
                     Layout::item(format!("({name}")),
@@ -264,6 +272,8 @@ impl<'a> Arranger<'a> {
                 let should_force_vertical = should_force_vertical || name == "for";
 
                 let should_force_vertical = should_force_vertical || self.mode == ArrangerMode::Let;
+
+                println!("--- {should_force_vertical}");
 
                 if should_force_vertical {
                     layouts.push(Layout::indent(block));
@@ -431,6 +441,7 @@ impl<'a> Arranger<'a> {
             Expr::Float(n) => Layout::Item(format_float(*n)),
             Expr::KeySymbol(s) => Layout::Item(format!(":{s}")),
             Expr::Char(c) => Layout::Item(format!(r#"(Char "{c}")"#)),
+            // #todo should handle Array?!
             Expr::List(exprs) => {
                 if exprs.is_empty() {
                     return Layout::Item("()".to_owned());

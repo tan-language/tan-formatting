@@ -1,7 +1,7 @@
-(let logo (Func (size)
+(let logo (Func [size]
     (let a 5)
 
-    (let component     (Func (angle)
+(let component     (Func [angle]
         (circle center-x center-y innder-radius)
         angle
     ))
