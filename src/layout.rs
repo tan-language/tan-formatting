@@ -316,8 +316,8 @@ impl<'a> Arranger<'a> {
                     Layout::join(layouts)
                 }
             }
-            Expr::Symbol(name) if name == "Dict" => {
-                // #todo in data mode consider formatting empty Dict like this: {}
+            Expr::Symbol(name) if name == "Map" => {
+                // #todo in data mode consider formatting empty Map like this: {}
                 let (bindings, should_force_vertical) = self.arrange_all_pairs();
 
                 // If more than 2 bindings force vertical.
