@@ -494,7 +494,8 @@ impl<'a> Arranger<'a> {
             Expr::String(s) => Layout::Item(format!("\"{}\"", escape_string(s))),
             Expr::Symbol(s) => Layout::Item(s.clone()),
             Expr::Int(n) => Layout::Item(n.to_string()),
-            Expr::One => Layout::Item("()".to_string()),
+            // #insight `()` is the single instance of the Unit type `Nil`.
+            Expr::Nil => Layout::Item("()".to_string()),
             Expr::Bool(b) => Layout::Item(b.to_string()),
             Expr::Float(n) => Layout::Item(format_float(*n)),
             Expr::KeySymbol(s) => Layout::Item(format!(":{s}")),
