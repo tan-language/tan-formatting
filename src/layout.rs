@@ -343,6 +343,17 @@ impl<'a> Arranger<'a> {
                     Layout::join(layouts)
                 }
             }
+            Expr::Symbol(name) if name == "Range" => {
+                // #todo support open-ended ranges.
+                // safe to unwrap, it's already parsed.
+                let start = self.exprs.next().unwrap();
+                let end = self.exprs.next().unwrap();
+                let mut range = format!("{start}..{end}");
+                if let Some(step) = self.exprs.next() {
+                    range = format!("{range}|{step}");
+                }
+                Layout::Item(range)
+            }
             Expr::Symbol(name) if name == "Array" => {
                 // #todo more sophisticated Array formatting needed.
                 // Try to format the array horizontally.
