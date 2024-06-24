@@ -219,7 +219,12 @@ impl<'a> Arranger<'a> {
 
         tuple.push(self.layout_from_expr(expr0));
 
-        let expr1 = self.exprs.next()?;
+        let mut expr1 = self.exprs.next()?;
+
+        if let Expr::Annotation(..) = expr1.unpack() {
+            tuple.push(self.layout_from_expr(expr1));
+            expr1 = self.exprs.next()?;
+        }
 
         tuple.push(self.layout_from_expr(expr1));
 
@@ -497,7 +502,7 @@ impl<'a> Arranger<'a> {
     }
 
     fn layout_from_expr(&mut self, expr: &Expr) -> Layout {
-        let (expr, ann) = expr.extract();
+        let (expr, _ann) = expr.extract();
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Item(s.clone()),
@@ -526,15 +531,15 @@ impl<'a> Arranger<'a> {
             _ => Layout::Item(expr.to_string()),
         };
 
-        if let Some(ann) = ann {
-            if ann.len() > 1 {
-                // #todo give special key to implicit range annotation.
-                // Remove the range annotation.
-                let mut ann = ann.clone();
-                ann.remove("range");
-                return Layout::Ann(ann, Box::new(layout));
-            }
-        }
+        // if let Some(ann) = ann {
+        //     if ann.len() > 1 {
+        //         // #todo give special key to implicit range annotation.
+        //         // Remove the range annotation.
+        //         let mut ann = ann.clone();
+        //         ann.remove("range");
+        //         return Layout::Ann(ann, Box::new(layout));
+        //     }
+        // }
 
         layout
     }
