@@ -1,0 +1,4 @@
+; #(Func [Scal Scal] Scal)
+(let * (Func [x y]
+    (Scal (* (x :value) (y :value)))
+))
