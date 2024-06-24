@@ -4,8 +4,8 @@
             (let fib            (Func (x)
         (let round x)
 
-    (let name "dummy" first-name "geo" last-name #(min
-2) #(max 23) "mosch" age #Year 25 is-admin true is-guest false is-new false)
+    (let name "dummy" first-name "geo" last-name #(min2)
+        #(max 23) "mosch" age #Year 25 is-admin true is-guest false is-new false)
 
 (if (< x 3)
             1

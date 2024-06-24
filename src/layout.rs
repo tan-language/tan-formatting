@@ -219,9 +219,25 @@ impl<'a> Arranger<'a> {
 
         tuple.push(self.layout_from_expr(expr0));
 
-        let expr1 = self.exprs.next()?;
+        // Try to bundle all annotations into one Row (span).
 
-        tuple.push(self.layout_from_expr(expr1));
+        let mut annotated = Vec::new();
+
+        let mut expr1 = self.exprs.next()?;
+
+        while let Expr::Annotation(..) = expr1.unpack() {
+            annotated.push(self.layout_from_expr(expr1));
+            expr1 = self.exprs.next()?;
+        }
+
+        // #todo Pretty-print the value/payload of the annotation.
+
+        if annotated.is_empty() {
+            tuple.push(self.layout_from_expr(expr1));
+        } else {
+            annotated.push(self.layout_from_expr(expr1));
+            tuple.push(Layout::row(annotated));
+        }
 
         if let Some(expr2) = self.exprs.next() {
             match expr2.unpack() {
@@ -497,7 +513,7 @@ impl<'a> Arranger<'a> {
     }
 
     fn layout_from_expr(&mut self, expr: &Expr) -> Layout {
-        let (expr, ann) = expr.extract();
+        let (expr, _ann) = expr.extract();
 
         let layout = match expr {
             Expr::Comment(s, _) => Layout::Item(s.clone()),
@@ -526,15 +542,15 @@ impl<'a> Arranger<'a> {
             _ => Layout::Item(expr.to_string()),
         };
 
-        if let Some(ann) = ann {
-            if ann.len() > 1 {
-                // #todo give special key to implicit range annotation.
-                // Remove the range annotation.
-                let mut ann = ann.clone();
-                ann.remove("range");
-                return Layout::Ann(ann, Box::new(layout));
-            }
-        }
+        // if let Some(ann) = ann {
+        //     if ann.len() > 1 {
+        //         // #todo give special key to implicit range annotation.
+        //         // Remove the range annotation.
+        //         let mut ann = ann.clone();
+        //         ann.remove("range");
+        //         return Layout::Ann(ann, Box::new(layout));
+        //     }
+        // }
 
         layout
     }

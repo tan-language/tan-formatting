@@ -113,3 +113,8 @@ pub fn should_format_ranges() {
 pub fn should_handle_arrays() {
     test_code_fixture("array");
 }
+
+#[test]
+pub fn should_retain_func_type_annotation() {
+    test_code_fixture("func-ann");
+}

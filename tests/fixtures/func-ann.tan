@@ -1,0 +1,5 @@
+#(Func [Scal Scal] Scal)
+(let * (Func [x y]
+    (let a #Year 1)
+    (Scal (* (x :value) #test (y :value)))
+))
