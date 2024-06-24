@@ -219,18 +219,24 @@ impl<'a> Arranger<'a> {
 
         tuple.push(self.layout_from_expr(expr0));
 
-        let expr1 = self.exprs.next()?;
+        // Try to bundle all annotations into one Row (span).
 
-        if let Expr::Annotation(..) = expr1.unpack() {
-            let expr2 = self.exprs.next()?;
-            tuple.push(Layout::row(vec![
-                self.layout_from_expr(expr1),
-                self.layout_from_expr(expr2),
-            ]));
-            // tuple.push(self.layout_from_expr(expr1));
-            // tuple.push(self.layout_from_expr(expr2));
-        } else {
+        let mut annotated = Vec::new();
+
+        let mut expr1 = self.exprs.next()?;
+
+        while let Expr::Annotation(..) = expr1.unpack() {
+            annotated.push(self.layout_from_expr(expr1));
+            expr1 = self.exprs.next()?;
+        }
+
+        // #todo Pretty-print the value/payload of the annotation.
+
+        if annotated.is_empty() {
             tuple.push(self.layout_from_expr(expr1));
+        } else {
+            annotated.push(self.layout_from_expr(expr1));
+            tuple.push(Layout::row(annotated));
         }
 
         if let Some(expr2) = self.exprs.next() {
