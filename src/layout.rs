@@ -219,14 +219,19 @@ impl<'a> Arranger<'a> {
 
         tuple.push(self.layout_from_expr(expr0));
 
-        let mut expr1 = self.exprs.next()?;
+        let expr1 = self.exprs.next()?;
 
         if let Expr::Annotation(..) = expr1.unpack() {
+            let expr2 = self.exprs.next()?;
+            tuple.push(Layout::row(vec![
+                self.layout_from_expr(expr1),
+                self.layout_from_expr(expr2),
+            ]));
+            // tuple.push(self.layout_from_expr(expr1));
+            // tuple.push(self.layout_from_expr(expr2));
+        } else {
             tuple.push(self.layout_from_expr(expr1));
-            expr1 = self.exprs.next()?;
         }
-
-        tuple.push(self.layout_from_expr(expr1));
 
         if let Some(expr2) = self.exprs.next() {
             match expr2.unpack() {
