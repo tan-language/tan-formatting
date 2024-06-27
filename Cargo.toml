@@ -11,3 +11,4 @@ edition = "2021"
 [dependencies]
 regex = "1"
 tan = { path = "../tan", version = "0.15" }
+tan-analysis = { path = "../tan-analysis", version = "0.15" }
