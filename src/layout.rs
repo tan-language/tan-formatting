@@ -229,35 +229,35 @@ impl<'a> Arranger<'a> {
 
     // #todo add doc-comment.
     fn arrange_next_pair(&mut self) -> Option<Layout> {
-        // #todo add unit-test just for this method.
+        // #todo Add unit-test just for this method.
 
-        let expr0 = self.exprs.next()?;
+        let expr = self.exprs.next()?;
 
-        // #insight handles full line comments.
-        // #todo needs more elegant solution.
-        if let Expr::Comment(..) = expr0.unpack() {
-            return Some(self.layout_from_expr(expr0));
+        // #insight Handles (skips) full line comments.
+        // #todo Needs more elegant solution.
+        if let Expr::Comment(..) = expr.unpack() {
+            return Some(self.layout_from_expr(expr));
         }
 
         let mut tuple = Vec::new();
 
-        tuple.push(self.maybe_annotated_layout_from_expr(expr0)?);
+        tuple.push(self.maybe_annotated_layout_from_expr(expr)?);
 
-        let expr1 = self.exprs.next()?;
-        tuple.push(self.maybe_annotated_layout_from_expr(expr1)?);
+        let expr = self.exprs.next()?;
+        tuple.push(self.maybe_annotated_layout_from_expr(expr)?);
 
         // Try to skip trailing comments.
-        if let Some(expr2) = self.exprs.next() {
-            match expr2.unpack() {
+        if let Some(expr) = self.exprs.next() {
+            match expr.unpack() {
                 Expr::Comment(..) => {
-                    if expr2.range().unwrap().start.line == expr0.range().unwrap().start.line {
-                        tuple.push(self.layout_from_expr(expr2));
+                    if expr.range().unwrap().start.line == expr.range().unwrap().start.line {
+                        tuple.push(self.layout_from_expr(expr));
                     } else {
-                        self.exprs.put_back(expr2);
+                        self.exprs.put_back(expr);
                     }
                 }
                 _ => {
-                    self.exprs.put_back(expr2);
+                    self.exprs.put_back(expr);
                 }
             }
         };
