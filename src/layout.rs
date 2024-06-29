@@ -204,10 +204,8 @@ impl<'a> Arranger<'a> {
     }
 
     // #todo Find good name.
+    // Try to bundle all annotations into one Row (span).
     fn maybe_annotated_layout_from_expr(&mut self, expr: &Expr) -> Option<Layout> {
-        // Try to bundle all annotations into one Row (span).
-
-        // let mut expr = self.exprs.next()?;
         let mut expr = expr;
 
         let mut annotated = Vec::new();
