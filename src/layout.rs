@@ -203,6 +203,30 @@ impl<'a> Arranger<'a> {
         (layouts, force_vertical)
     }
 
+    // #todo Find good name.
+    fn maybe_annotated_layout_from_expr(&mut self, expr: &Expr) -> Option<Layout> {
+        // Try to bundle all annotations into one Row (span).
+
+        // let mut expr = self.exprs.next()?;
+        let mut expr = expr;
+
+        let mut annotated = Vec::new();
+
+        while let Expr::Annotation(..) = expr.unpack() {
+            annotated.push(self.layout_from_expr(expr));
+            expr = self.exprs.next()?;
+        }
+
+        // #todo Pretty-print the value/payload of the annotation.
+
+        if annotated.is_empty() {
+            Some(self.layout_from_expr(expr))
+        } else {
+            annotated.push(self.layout_from_expr(expr));
+            Some(Layout::row(annotated))
+        }
+    }
+
     // #todo add doc-comment.
     fn arrange_next_pair(&mut self) -> Option<Layout> {
         // #todo add unit-test just for this method.
@@ -217,28 +241,12 @@ impl<'a> Arranger<'a> {
 
         let mut tuple = Vec::new();
 
-        tuple.push(self.layout_from_expr(expr0));
+        tuple.push(self.maybe_annotated_layout_from_expr(expr0)?);
 
-        // Try to bundle all annotations into one Row (span).
+        let expr1 = self.exprs.next()?;
+        tuple.push(self.maybe_annotated_layout_from_expr(expr1)?);
 
-        let mut annotated = Vec::new();
-
-        let mut expr1 = self.exprs.next()?;
-
-        while let Expr::Annotation(..) = expr1.unpack() {
-            annotated.push(self.layout_from_expr(expr1));
-            expr1 = self.exprs.next()?;
-        }
-
-        // #todo Pretty-print the value/payload of the annotation.
-
-        if annotated.is_empty() {
-            tuple.push(self.layout_from_expr(expr1));
-        } else {
-            annotated.push(self.layout_from_expr(expr1));
-            tuple.push(Layout::row(annotated));
-        }
-
+        // Try to skip trailing comments.
         if let Some(expr2) = self.exprs.next() {
             match expr2.unpack() {
                 Expr::Comment(..) => {
@@ -512,7 +520,7 @@ impl<'a> Arranger<'a> {
         }
     }
 
-    fn layout_from_expr(&mut self, expr: &Expr) -> Layout {
+    fn layout_from_expr(&self, expr: &Expr) -> Layout {
         let (expr, _ann) = expr.extract();
 
         let layout = match expr {

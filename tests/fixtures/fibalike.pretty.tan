@@ -20,6 +20,6 @@
     )
 ))
 
-(let #cool b)
+(let #cool b (+ 1 2))
 
 (fib 10)

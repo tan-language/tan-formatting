@@ -118,3 +118,8 @@ pub fn should_handle_arrays() {
 pub fn should_retain_func_type_annotation() {
     test_code_fixture("func-ann");
 }
+
+#[test]
+pub fn should_handle_let_with_var_annotation() {
+    test_code_fixture("let-ann");
+}
