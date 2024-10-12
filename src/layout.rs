@@ -531,6 +531,7 @@ impl<'a> Arranger<'a> {
             Expr::None => Layout::Item("()".to_string()),
             Expr::Bool(b) => Layout::Item(b.to_string()),
             Expr::Float(n) => Layout::Item(format_float(*n)),
+            // #todo Handle keypaths, don't desugar.
             Expr::KeySymbol(s) => Layout::Item(format!(":{s}")),
             Expr::Char(c) => Layout::Item(format!(r#"(Char "{c}")"#)),
             // #todo should handle Array?!
